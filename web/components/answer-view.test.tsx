@@ -7,6 +7,7 @@ describe('AnswerView citations', () => {
     const markup = renderToStaticMarkup(
       <AnswerView
         answer={{
+          kind: 'react_answer',
           message: '## Overview\nReact remembers state [1].\n\n## Citations\n- State guide: [1]',
           sources: [
             {
@@ -26,5 +27,21 @@ describe('AnswerView citations', () => {
     expect(markup).toContain('class="citations-section"');
     expect(markup.match(/data-debug-source-citation="1"/g)).toHaveLength(2);
     expect(markup).not.toContain(' hidden=""');
+  });
+
+  it('renders a scope notice without an empty sources panel', () => {
+    const markup = renderToStaticMarkup(
+      <AnswerView
+        answer={{
+          kind: 'scope_notice',
+          message: 'I can only answer questions about React and its official documentation.',
+          sources: [],
+        }}
+      />,
+    );
+
+    expect(markup).toContain('answer-layout-standalone');
+    expect(markup).toContain('React questions only');
+    expect(markup).not.toContain('Documentation sources');
   });
 });

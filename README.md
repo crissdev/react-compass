@@ -5,7 +5,7 @@ A small React documentation assistant built as two local applications in one wor
 - `web/` — Next.js UI and backend-for-frontend proxy
 - `api/` — FastAPI, LangChain, and the existing Chroma collection
 
-The answer pipeline retrieves React documentation, asks a configurable chat model for a grounded Markdown answer, and returns the source excerpts used to create it. The UI streams progress events, renders highlighted code, and turns React docs-style `<Sandpack>` examples into editable previews. The browser keeps the 15 most recent questions, while Next.js caches matching answers with weekly stale-while-revalidate behavior. Removing a history entry also invalidates its cached answer.
+The answer pipeline first classifies every question for React relevance and prompt-injection attempts. React questions continue through retrieval and grounded answer generation; other inputs receive a fixed scope notice without running RAG. The UI streams progress events, renders highlighted code, and turns React docs-style `<Sandpack>` examples into editable previews. The browser keeps the 15 most recent questions. Next.js checks the uncached classification gate before entering its weekly stale-while-revalidate answer cache, so scope notices are never added to that cache. Removing a history entry also invalidates its cached React answer.
 
 ## Run locally
 

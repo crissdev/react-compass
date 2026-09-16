@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { cacheLife, cacheTag } from 'next/cache';
+import { classifyQuestion } from '@/lib/question-gate';
 import type { Answer } from '@/lib/types';
 import { normalizeQuestion, questionKey } from '@/lib/questions';
 
@@ -13,8 +14,14 @@ export function answerCacheTag(question: string): string {
 export async function getCachedAnswer(question: string): Promise<Answer> {
   'use cache';
 
-  cacheLife('weeks');
   cacheTag(answerCacheTag(question));
+
+  const gate = await classifyQuestion(question);
+  if (gate.category !== 'react') {
+    if (!gate.response) throw new Error('The question gate returned an invalid response.');
+    cacheLife({ stale: 0, revalidate: 0, expire: 1 });
+    return gate.response;
+  }
 
   const response = await fetch(`${API_BASE_URL}/ask`, {
     method: 'POST',
@@ -28,5 +35,12 @@ export async function getCachedAnswer(question: string): Promise<Answer> {
     throw new Error(detail || 'The documentation API returned an error.');
   }
 
-  return (await response.json()) as Answer;
+  const answer = (await response.json()) as Answer;
+  if (answer.kind === 'react_answer') {
+    cacheLife('weeks');
+  } else {
+    cacheLife({ stale: 0, revalidate: 0, expire: 1 });
+  }
+
+  return answer;
 }

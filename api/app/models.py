@@ -13,6 +13,10 @@ class GeneratedAnswer(BaseModel):
     )
 
 
+class QuestionClassification(BaseModel):
+    category: Literal["react", "unrelated", "prompt_injection"]
+
+
 class SourceExcerpt(BaseModel):
     id: str
     citation: int = Field(ge=1)
@@ -24,8 +28,14 @@ class SourceExcerpt(BaseModel):
 
 
 class AnswerResponse(BaseModel):
+    kind: Literal["react_answer", "scope_notice"] = "react_answer"
     message: str
     sources: list[SourceExcerpt]
+
+
+class QuestionGateResponse(BaseModel):
+    category: Literal["react", "unrelated", "prompt_injection"]
+    response: AnswerResponse | None = None
 
 
 class StreamEvent(BaseModel):

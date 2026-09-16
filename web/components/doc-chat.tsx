@@ -239,7 +239,9 @@ export function DocChat() {
       {answer && <AnswerView answer={answer} />}
 
       <footer>
-        Answers are generated from retrieved documentation. Check the cited source for details.
+        {answer?.kind === 'scope_notice'
+          ? 'DocChat answers questions about React and its official documentation.'
+          : 'Answers are generated from retrieved documentation. Check the cited source for details.'}
       </footer>
     </main>
   );

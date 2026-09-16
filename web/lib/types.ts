@@ -9,6 +9,7 @@ export type SourceExcerpt = {
 };
 
 export type Answer = {
+  kind: 'react_answer' | 'scope_notice';
   message: string;
   sources: SourceExcerpt[];
 };

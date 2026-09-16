@@ -3,6 +3,8 @@ import { answerCacheTag, getCachedAnswer } from '@/lib/answer-cache';
 import { normalizeQuestion } from '@/lib/questions';
 import type { StreamEvent } from '@/lib/types';
 
+const CACHE_STATUS_DELAY_MS = 500;
+
 function encodeEvent(event: StreamEvent): Uint8Array {
   return new TextEncoder().encode(`${JSON.stringify(event)}\n`);
 }
@@ -32,6 +34,7 @@ export async function POST(request: Request) {
     cancelled = true;
   };
   request.signal.addEventListener('abort', markCancelled, { once: true });
+  let pendingStatusTimer: ReturnType<typeof setTimeout> | null = null;
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -40,13 +43,29 @@ export async function POST(request: Request) {
           encodeEvent({
             type: 'status',
             stage: 'cache',
-            message: 'Checking saved answers and React docs',
+            message: 'Checking saved React answers',
           }),
         );
       }
 
       try {
+        pendingStatusTimer = setTimeout(() => {
+          if (!cancelled) {
+            controller.enqueue(
+              encodeEvent({
+                type: 'status',
+                stage: 'answering',
+                message: 'Checking question scope and preparing an answer',
+              }),
+            );
+          }
+        }, CACHE_STATUS_DELAY_MS);
+
         const answer = await getCachedAnswer(question);
+        if (pendingStatusTimer) clearTimeout(pendingStatusTimer);
+        if (answer.kind !== 'react_answer') {
+          revalidateTag(answerCacheTag(question), { expire: 0 });
+        }
         if (!cancelled) controller.enqueue(encodeEvent({ type: 'result', data: answer }));
       } catch {
         if (!cancelled) {
@@ -59,12 +78,14 @@ export async function POST(request: Request) {
           );
         }
       } finally {
+        if (pendingStatusTimer) clearTimeout(pendingStatusTimer);
         request.signal.removeEventListener('abort', markCancelled);
         if (!cancelled) controller.close();
       }
     },
     cancel() {
       cancelled = true;
+      if (pendingStatusTimer) clearTimeout(pendingStatusTimer);
       request.signal.removeEventListener('abort', markCancelled);
     },
   });

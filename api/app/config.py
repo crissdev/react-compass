@@ -21,7 +21,7 @@ class Settings(BaseSettings):
         validate_default=True,
     )
 
-    model_name: str = "gpt-5"
+    model_name: str = "gpt-5-nano"
     chroma_path: Path = Path("data/embeddings")
     chroma_collection: str = "react-docs"
     react_dev_root: Path = Path("../gh/react.dev/src/content")

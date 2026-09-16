@@ -9,8 +9,8 @@ from fastapi.responses import StreamingResponse
 from langsmith import traceable
 
 from app.config import get_settings
-from app.models import AnswerResponse, AskRequest, StreamEvent
-from app.service import ReactDocsSearchService, get_search_service
+from app.models import AnswerResponse, AskRequest, QuestionGateResponse, StreamEvent
+from app.service import ReactDocsSearchService, get_search_service, scope_notice_response
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -42,6 +42,16 @@ async def ask(
     return await service.search(request.question)
 
 
+@app.post("/classify", response_model=QuestionGateResponse)
+async def classify_question(
+    request: AskRequest,
+    service: Annotated[ReactDocsSearchService, Depends(get_search_service)],
+) -> QuestionGateResponse:
+    classification = await service.classify(request.question)
+    response = None if classification.category == "react" else scope_notice_response()
+    return QuestionGateResponse(category=classification.category, response=response)
+
+
 @app.post("/ask/stream")
 async def ask_stream(
     request: AskRequest,
@@ -50,6 +60,18 @@ async def ask_stream(
     @traceable(name="react_docs_search", run_type="chain")
     async def events() -> AsyncIterator[bytes]:
         try:
+            yield encode_event(
+                StreamEvent(
+                    type="status",
+                    stage="classifying",
+                    message="Checking question scope and safety",
+                )
+            )
+            classification = await service.classify(request.question)
+            if classification.category != "react":
+                yield encode_event(StreamEvent(type="result", data=scope_notice_response()))
+                return
+
             yield encode_event(
                 StreamEvent(type="status", stage="retrieving", message="Searching React docs")
             )
