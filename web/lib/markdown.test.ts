@@ -60,6 +60,30 @@ h1 { color: teal; }
     );
   });
 
+  it('recovers Markdown and a nested code block from an accidental outer fence', () => {
+    const content =
+      '````\n## Fetching data\nUse an Effect carefully.\n\n```js\nuseEffect(loadData, []);\n````\n\n``` [2]';
+
+    expect(unwrapProseFences(content)).toBe(
+      '\n## Fetching data\nUse an Effect carefully.\n\n```js\nuseEffect(loadData, []);\n```\n\n\n[2]',
+    );
+  });
+
+  it('preserves leading code when a malformed fence also contains a Markdown section', () => {
+    const content =
+      '````js\nconst albums = await loadAlbums();\n\n[4]\n\n## Custom hooks\nExample:\n```js\nuseOnlineStatus();\n````';
+
+    expect(unwrapProseFences(content)).toBe(
+      '\n```js\nconst albums = await loadAlbums();\n```\n\n[4]\n\n## Custom hooks\nExample:\n```js\nuseOnlineStatus();\n```\n',
+    );
+  });
+
+  it('turns React documentation Note markup into a Markdown callout', () => {
+    expect(unwrapProseFences('<Note>Prefer a data library.</Note>')).toBe(
+      '> Prefer a data library.',
+    );
+  });
+
   it('preserves real code and single-line text fences', () => {
     expect(unwrapProseFences('```js\nconst value = 1;\n```')).toBe(
       '```js\nconst value = 1;\n```',

@@ -139,6 +139,7 @@ export function DocChat() {
             placeholder="How does useEffect work?"
             autoComplete="off"
             maxLength={1000}
+            readOnly={isLoading}
           />
           {isLoading ? (
             <button className="cancel-button" type="button" onClick={cancel}>

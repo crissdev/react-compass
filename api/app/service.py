@@ -24,6 +24,8 @@ Requirements:
 - Cite factual claims with the matching source number, such as [1] or [2].
 - Prefer the examples already present in the context. Do not invent APIs or behavior.
 - Use fenced code blocks only for code. Keep explanations and bullet lists outside fences.
+- Return standard Markdown only. Do not emit MDX components such as <Note> or wrap Markdown
+  sections in an additional outer code fence.
 - If a complete runnable React example is present, wrap only its fenced file blocks in
   <Sandpack> and </Sandpack> so the UI can make it interactive.
 - If the context cannot answer the question, say so directly and do not guess.

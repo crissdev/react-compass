@@ -4,10 +4,14 @@ export type MarkdownPart =
 
 const SANDPACK_PATTERN = /<Sandpack(?:\s[^>]*)?>([\s\S]*?)<\/Sandpack>/gi;
 const FENCE_PATTERN = /```([\w+-]*)([^\n]*)\n([\s\S]*?)```/g;
+const MIXED_MARKDOWN_FENCE_PATTERN =
+  /^[ \t]{0,3}(`{3,}|~{3,})[ \t]*([\w+-]*)[^\n]*\r?\n([\s\S]*?)^[ \t]{0,3}\1[ \t]*$/gm;
 const PROSE_FENCE_PATTERN =
   /^[ \t]{0,3}(`{3,}|~{3,})[ \t]*(?:text|markdown|md)?[ \t]*\r?\n([\s\S]*?)^[ \t]{0,3}\1[ \t]*$/gim;
 const UNTERMINATED_PROSE_FENCE_PATTERN =
   /^[ \t]{0,3}(?:`{3,}|~{3,})[ \t]*(?:text|markdown|md)?[ \t]*\r?\n([\s\S]*?)(?=\r?\n<Sandpack(?:\s|>))/gim;
+const STRAY_CITATION_FENCE_PATTERN = /^[ \t]*(?:`{3,}|~{3,})[ \t]+(?=\[\d+\](?:\s|$))/gm;
+const REACT_NOTE_PATTERN = /<Note>\s*([\s\S]*?)\s*<\/Note>/gi;
 const CODE_PATTERN = /(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`)/g;
 const CITATION_PATTERN = /(?<!\\)\[(\d+)\](?!\s*[:(])/g;
 const SOURCE_CITATION_PREFIX = '#docchat-source-';
@@ -42,23 +46,62 @@ export function linkSourceCitations(content: string, citations: readonly number[
 }
 
 export function unwrapProseFences(content: string): string {
-  const unwrapIfProseList = (fence: string, body: string): string => {
+  const recoverMixedMarkdownFence = (
+    fence: string,
+    _outerMarker: string,
+    language: string,
+    body: string,
+  ): string => {
+    const heading = body.match(/^#{1,6}\s+\S/m);
+    const nestedFences = [
+      ...body.matchAll(/^[ \t]{0,3}(`{3}|~{3})(?:[\w+-]+)?[^\n]*$/gm),
+    ];
+    if (heading?.index === undefined || nestedFences.length === 0) return fence;
+
+    let leadingCode = body.slice(0, heading.index).trim();
+    const markdown = body.slice(heading.index).trim();
+    const citation = leadingCode.match(/(?:^|\n)[ \t]*(\[\d+\])[ \t]*$/)?.[1];
+    if (citation) {
+      leadingCode = leadingCode.replace(/(?:^|\n)[ \t]*\[\d+\][ \t]*$/, '').trimEnd();
+    }
+
+    const nestedMarker = nestedFences[0][1];
+    const nestedClosingFence = nestedFences.length % 2 === 1 ? `\n${nestedMarker}` : '';
+    const recoveredParts: string[] = [];
+    if (leadingCode) {
+      recoveredParts.push(`\`\`\`${language || 'text'}\n${leadingCode}\n\`\`\``);
+    }
+    if (citation) recoveredParts.push(citation);
+    recoveredParts.push(`${markdown}${nestedClosingFence}`);
+
+    return `\n${recoveredParts.join('\n\n')}\n`;
+  };
+
+  const unwrapMalformedFence = (fence: string, body: string): string => {
     const lines = body
       .trim()
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter(Boolean);
     const isProseList = lines.length > 1 && lines.every((line) => /^[-*]\s+\S/.test(line));
-
     return isProseList ? `\n${body.trim()}\n` : fence;
   };
 
   return content
+    .replace(MIXED_MARKDOWN_FENCE_PATTERN, recoverMixedMarkdownFence)
     .replace(PROSE_FENCE_PATTERN, (fence, _marker: string, body: string) =>
-      unwrapIfProseList(fence, body),
+      unwrapMalformedFence(fence, body),
     )
     .replace(UNTERMINATED_PROSE_FENCE_PATTERN, (fence, body: string) =>
-      unwrapIfProseList(fence, body),
+      unwrapMalformedFence(fence, body),
+    )
+    .replace(STRAY_CITATION_FENCE_PATTERN, '')
+    .replace(REACT_NOTE_PATTERN, (_note, body: string) =>
+      body
+        .trim()
+        .split(/\r?\n/)
+        .map((line) => `> ${line}`)
+        .join('\n'),
     );
 }
 
