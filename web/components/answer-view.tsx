@@ -4,12 +4,17 @@ import { ExternalLink, FileText } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';
-import { splitMarkdown } from '@/lib/markdown';
+import { citationFromHref, linkSourceCitations, splitMarkdown } from '@/lib/markdown';
 import type { Answer } from '@/lib/types';
 import { SandpackExample } from './sandpack-example';
 
 export function AnswerView({ answer }: { answer: Answer }) {
-  const parts = splitMarkdown(answer.message);
+  const sourcesByCitation = new Map(answer.sources.map((source) => [source.citation, source]));
+  const message = linkSourceCitations(
+    answer.message,
+    answer.sources.filter((source) => source.source_url).map((source) => source.citation),
+  );
+  const parts = splitMarkdown(message);
 
   return (
     <article className="answer-layout" aria-live="polite">
@@ -31,11 +36,36 @@ export function AnswerView({ answer }: { answer: Answer }) {
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeHighlight]}
                 components={{
-                  a: ({ children, ...props }) => (
-                    <a {...props} target="_blank" rel="noreferrer">
-                      {children}
-                    </a>
-                  ),
+                  a: ({ children, href, ...props }) => {
+                    const citation = citationFromHref(href);
+                    const source = citation ? sourcesByCitation.get(citation) : undefined;
+
+                    if (source) {
+                      return (
+                        <a
+                          {...props}
+                          className="source-citation"
+                          href={source.source_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          aria-label={`Open source ${source.citation}: ${source.title} in a new tab`}
+                          title={`${source.title}${source.section ? ` — ${source.section}` : ''}`}
+                        >
+                          <FileText size={11} aria-hidden="true" />
+                          <span className="source-citation-label">{source.title}</span>
+                          <span className="source-citation-number" aria-hidden="true">
+                            {source.citation}
+                          </span>
+                        </a>
+                      );
+                    }
+
+                    return (
+                      <a {...props} href={href} target="_blank" rel="noreferrer">
+                        {children}
+                      </a>
+                    );
+                  },
                 }}
               >
                 {part.content}

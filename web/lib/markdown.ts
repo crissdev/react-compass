@@ -4,6 +4,38 @@ export type MarkdownPart =
 
 const SANDPACK_PATTERN = /<Sandpack(?:\s[^>]*)?>([\s\S]*?)<\/Sandpack>/gi;
 const FENCE_PATTERN = /```([\w+-]*)([^\n]*)\n([\s\S]*?)```/g;
+const CODE_PATTERN = /(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`)/g;
+const CITATION_PATTERN = /(?<!\\)\[(\d+)\](?!\s*[:(])/g;
+const SOURCE_CITATION_PREFIX = '#docchat-source-';
+
+export function sourceCitationHref(citation: number): string {
+  return `${SOURCE_CITATION_PREFIX}${citation}`;
+}
+
+export function citationFromHref(href: string | undefined): number | null {
+  if (!href?.startsWith(SOURCE_CITATION_PREFIX)) return null;
+
+  const value = Number(href.slice(SOURCE_CITATION_PREFIX.length));
+  return Number.isInteger(value) && value > 0 ? value : null;
+}
+
+export function linkSourceCitations(content: string, citations: readonly number[]): string {
+  const availableCitations = new Set(citations);
+
+  return content
+    .split(CODE_PATTERN)
+    .map((segment, index) => {
+      if (index % 2 === 1) return segment;
+
+      return segment.replace(CITATION_PATTERN, (match, value: string) => {
+        const citation = Number(value);
+        return availableCitations.has(citation)
+          ? `[${citation}](${sourceCitationHref(citation)})`
+          : match;
+      });
+    })
+    .join('');
+}
 
 function extensionFor(language: string): string {
   if (language === 'tsx' || language === 'typescript') return 'tsx';

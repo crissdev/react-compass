@@ -409,6 +409,66 @@ a {
   text-underline-offset: 3px;
 }
 
+.markdown-body .source-citation {
+  display: inline-flex;
+  max-width: min(180px, 42vw);
+  min-height: 20px;
+  align-items: center;
+  gap: 4px;
+  margin: 0 2px;
+  padding: 1px 7px 1px 6px;
+  border: 1px solid #d5e5e9;
+  border-radius: 999px;
+  color: #2f5e6a;
+  background: #f0f7f8;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1;
+  text-decoration: none;
+  vertical-align: middle;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.markdown-body .source-citation:hover {
+  border-color: #9ecdd7;
+  color: #175e73;
+  background: #e8f5f7;
+  box-shadow: 0 3px 10px rgba(36, 93, 108, 0.12);
+}
+
+.markdown-body .source-citation:focus-visible {
+  outline: 3px solid rgba(51, 185, 218, 0.3);
+  outline-offset: 2px;
+}
+
+.source-citation > svg {
+  flex: 0 0 auto;
+  color: #5f8e99;
+}
+
+.source-citation-label {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-citation-number {
+  min-width: 15px;
+  height: 15px;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 999px;
+  color: #287185;
+  background: rgba(117, 201, 219, 0.2);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
 .markdown-body :not(pre) > code {
   padding: 2px 6px;
   border-radius: 6px;
