@@ -1,0 +1,32 @@
+import { createHash } from 'node:crypto';
+import { cacheLife, cacheTag } from 'next/cache';
+import type { Answer } from '@/lib/types';
+import { normalizeQuestion, questionKey } from '@/lib/questions';
+
+const API_BASE_URL = process.env.API_BASE_URL ?? 'http://127.0.0.1:8000';
+
+export function answerCacheTag(question: string): string {
+  const digest = createHash('sha256').update(questionKey(question)).digest('hex');
+  return `docchat-answer:${digest}`;
+}
+
+export async function getCachedAnswer(question: string): Promise<Answer> {
+  'use cache';
+
+  cacheLife('weeks');
+  cacheTag(answerCacheTag(question));
+
+  const response = await fetch(`${API_BASE_URL}/ask`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question: normalizeQuestion(question) }),
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(detail || 'The documentation API returned an error.');
+  }
+
+  return (await response.json()) as Answer;
+}

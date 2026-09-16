@@ -1,12 +1,14 @@
 'use client';
 
 import { ExternalLink, FileText } from 'lucide-react';
+import { Fragment } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';
 import {
   citationFromHref,
   linkSourceCitations,
+  splitCitationSections,
   splitMarkdown,
   unwrapProseFences,
 } from '@/lib/markdown';
@@ -19,7 +21,7 @@ export function AnswerView({ answer }: { answer: Answer }) {
     unwrapProseFences(answer.message),
     answer.sources.filter((source) => source.source_url).map((source) => source.citation),
   );
-  const parts = splitMarkdown(message);
+  const sections = splitCitationSections(message);
 
   return (
     <article className="answer-layout" aria-live="polite">
@@ -32,53 +34,65 @@ export function AnswerView({ answer }: { answer: Answer }) {
           </div>
         </div>
         <div className="markdown-body">
-          {parts.map((part, index) =>
-            part.type === 'sandpack' ? (
-              <SandpackExample key={`sandpack-${index}`} files={part.files} />
-            ) : (
-              <ReactMarkdown
-                key={`markdown-${index}`}
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeHighlight]}
-                components={{
-                  a: ({ children, href, ...props }) => {
-                    const citation = citationFromHref(href);
-                    const source = citation ? sourcesByCitation.get(citation) : undefined;
+          {sections.map((section, sectionIndex) => {
+            const content = splitMarkdown(section.content).map((part, partIndex) =>
+              part.type === 'sandpack' ? (
+                <SandpackExample
+                  key={`sandpack-${sectionIndex}-${partIndex}`}
+                  files={part.files}
+                />
+              ) : (
+                <ReactMarkdown
+                  key={`markdown-${sectionIndex}-${partIndex}`}
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeHighlight]}
+                  components={{
+                    a: ({ children, href, ...props }) => {
+                      const citation = citationFromHref(href);
+                      const source = citation ? sourcesByCitation.get(citation) : undefined;
 
-                    if (source) {
+                      if (source) {
+                        return (
+                          <a
+                            {...props}
+                            className="source-citation"
+                            href={source.source_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            data-debug-source-citation={source.citation}
+                            aria-label={`Open source ${source.citation}: ${source.title} in a new tab`}
+                            title={`${source.title}${source.section ? ` — ${source.section}` : ''}`}
+                          >
+                            <FileText size={11} aria-hidden="true" />
+                            <span className="source-citation-label">{source.title}</span>
+                            <span className="source-citation-number" aria-hidden="true">
+                              {source.citation}
+                            </span>
+                          </a>
+                        );
+                      }
+
                       return (
-                        <a
-                          {...props}
-                          className="source-citation"
-                          href={source.source_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          hidden
-                          aria-hidden="true"
-                          data-debug-source-citation={source.citation}
-                          title={`${source.title}${source.section ? ` — ${source.section}` : ''}`}
-                        >
-                          <FileText size={11} aria-hidden="true" />
-                          <span className="source-citation-label">{source.title}</span>
-                          <span className="source-citation-number" aria-hidden="true">
-                            {source.citation}
-                          </span>
+                        <a {...props} href={href} target="_blank" rel="noreferrer">
+                          {children}
                         </a>
                       );
-                    }
+                    },
+                  }}
+                >
+                  {part.content}
+                </ReactMarkdown>
+              ),
+            );
 
-                    return (
-                      <a {...props} href={href} target="_blank" rel="noreferrer">
-                        {children}
-                      </a>
-                    );
-                  },
-                }}
-              >
-                {part.content}
-              </ReactMarkdown>
-            ),
-          )}
+            return section.type === 'citations' ? (
+              <div className="citations-section" key={`section-${sectionIndex}`}>
+                {content}
+              </div>
+            ) : (
+              <Fragment key={`section-${sectionIndex}`}>{content}</Fragment>
+            );
+          })}
         </div>
       </section>
 

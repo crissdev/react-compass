@@ -4,6 +4,7 @@ import {
   linkSourceCitations,
   parseSandpackFiles,
   sourceCitationHref,
+  splitCitationSections,
   splitMarkdown,
   unwrapProseFences,
 } from './markdown';
@@ -41,6 +42,17 @@ h1 { color: teal; }
     expect(citationFromHref('#docchat-source-3')).toBe(3);
     expect(citationFromHref('#docchat-source-nope')).toBeNull();
     expect(citationFromHref('https://react.dev')).toBeNull();
+  });
+
+  it('isolates a citations section until the next heading at the same level', () => {
+    const content =
+      '## Overview\nClaim [1].\n\n## Citations\n- Source [1]\n\n## Follow-up\nMore detail [1].';
+
+    expect(splitCitationSections(content)).toEqual([
+      { type: 'content', content: '## Overview\nClaim [1].\n\n' },
+      { type: 'citations', content: '## Citations\n- Source [1]\n\n' },
+      { type: 'content', content: '## Follow-up\nMore detail [1].' },
+    ]);
   });
 
   it('turns a prose-only fenced list back into Markdown', () => {

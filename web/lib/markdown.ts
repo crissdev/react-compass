@@ -2,6 +2,11 @@ export type MarkdownPart =
   | { type: 'markdown'; content: string }
   | { type: 'sandpack'; files: Record<string, string> };
 
+export type MarkdownSection = {
+  type: 'content' | 'citations';
+  content: string;
+};
+
 const SANDPACK_PATTERN = /<Sandpack(?:\s[^>]*)?>([\s\S]*?)<\/Sandpack>/gi;
 const FENCE_PATTERN = /```([\w+-]*)([^\n]*)\n([\s\S]*?)```/g;
 const MIXED_MARKDOWN_FENCE_PATTERN =
@@ -15,6 +20,7 @@ const REACT_NOTE_PATTERN = /<Note>\s*([\s\S]*?)\s*<\/Note>/gi;
 const CODE_PATTERN = /(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`)/g;
 const CITATION_PATTERN = /([ \t]*)(?<!\\)\[(\d+)\](?!\s*[:(])/g;
 const SOURCE_CITATION_PREFIX = '#docchat-source-';
+const MARKDOWN_HEADING_PATTERN = /^[ \t]{0,3}(#{1,6})[ \t]+(.+?)[ \t]*#*[ \t]*$/gm;
 
 export function sourceCitationHref(citation: number): string {
   return `${SOURCE_CITATION_PREFIX}${citation}`;
@@ -43,6 +49,34 @@ export function linkSourceCitations(content: string, citations: readonly number[
       });
     })
     .join('');
+}
+
+export function splitCitationSections(content: string): MarkdownSection[] {
+  MARKDOWN_HEADING_PATTERN.lastIndex = 0;
+  const headings = [...content.matchAll(MARKDOWN_HEADING_PATTERN)];
+  const citationHeadingIndex = headings.findIndex(
+    (heading) => heading[2].trim().toLowerCase() === 'citations',
+  );
+  if (citationHeadingIndex < 0) return [{ type: 'content', content }];
+
+  const citationHeading = headings[citationHeadingIndex];
+  const citationLevel = citationHeading[1].length;
+  const citationStart = citationHeading.index;
+  const nextSection = headings
+    .slice(citationHeadingIndex + 1)
+    .find((heading) => heading[1].length <= citationLevel);
+  const citationEnd = nextSection?.index ?? content.length;
+  const sections: MarkdownSection[] = [];
+
+  if (citationStart > 0) {
+    sections.push({ type: 'content', content: content.slice(0, citationStart) });
+  }
+  sections.push({ type: 'citations', content: content.slice(citationStart, citationEnd) });
+  if (citationEnd < content.length) {
+    sections.push({ type: 'content', content: content.slice(citationEnd) });
+  }
+
+  return sections;
 }
 
 export function unwrapProseFences(content: string): string {

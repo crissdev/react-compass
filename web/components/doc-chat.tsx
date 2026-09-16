@@ -3,8 +3,11 @@
 import { FormEvent, MouseEvent, useRef, useState } from 'react';
 import { ArrowUp, BookOpen, CircleStop, Github, Sparkles } from 'lucide-react';
 import { readAnswerStream } from '@/lib/answer-stream';
+import { addSearchHistoryItem, removeSearchHistoryItem } from '@/lib/search-history';
+import { saveSearchHistory, useSearchHistory } from '@/lib/search-history-store';
 import type { Answer } from '@/lib/types';
 import { AnswerView } from './answer-view';
+import { SearchHistory } from './search-history';
 import { ThemeToggle } from './theme-toggle';
 
 const suggestions = [
@@ -32,6 +35,8 @@ export function DocChat() {
   const [isLoading, setIsLoading] = useState(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
+  const [removingQuestion, setRemovingQuestion] = useState<string | null>(null);
+  const searchHistory = useSearchHistory();
   const controllerRef = useRef<AbortController | null>(null);
 
   async function ask(nextQuestion = question) {
@@ -43,6 +48,7 @@ export function DocChat() {
     setError('');
     setStatus('Connecting to the documentation index');
     setIsLoading(true);
+    saveSearchHistory(addSearchHistoryItem(searchHistory, value));
     const controller = new AbortController();
     controllerRef.current = controller;
 
@@ -94,6 +100,25 @@ export function DocChat() {
     controllerRef.current = null;
     setStatus('Search cancelled');
     setIsLoading(false);
+  }
+
+  async function removeHistory(questionToRemove: string) {
+    setRemovingQuestion(questionToRemove);
+    setError('');
+
+    try {
+      const response = await fetch('/api/ask', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: questionToRemove }),
+      });
+      if (!response.ok) throw new Error('Could not remove that saved search.');
+      saveSearchHistory(removeSearchHistoryItem(searchHistory, questionToRemove));
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not remove that saved search.');
+    } finally {
+      setRemovingQuestion(null);
+    }
   }
 
   return (
@@ -172,21 +197,30 @@ export function DocChat() {
         )}
 
         {!answer && !isLoading && (
-          <div className="suggestions">
-            <p>Try asking</p>
-            <div className="suggestion-grid">
-              {suggestions.map((suggestion) => (
-                <button
-                  type="button"
-                  key={suggestion.label}
-                  onClick={() => void ask(suggestion.question)}
-                >
-                  <span>{suggestion.label}</span>
-                  {suggestion.question}
-                </button>
-              ))}
+          <>
+            <div className="suggestions">
+              <p>Try asking</p>
+              <div className="suggestion-grid">
+                {suggestions.map((suggestion) => (
+                  <button
+                    type="button"
+                    key={suggestion.label}
+                    onClick={() => void ask(suggestion.question)}
+                  >
+                    <span>{suggestion.label}</span>
+                    {suggestion.question}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+
+            <SearchHistory
+              items={searchHistory}
+              removingQuestion={removingQuestion}
+              onSelect={(historyQuestion) => void ask(historyQuestion)}
+              onRemove={(historyQuestion) => void removeHistory(historyQuestion)}
+            />
+          </>
         )}
       </section>
 
