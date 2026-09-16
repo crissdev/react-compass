@@ -1,0 +1,73 @@
+export type MarkdownPart =
+  | { type: 'markdown'; content: string }
+  | { type: 'sandpack'; files: Record<string, string> };
+
+const SANDPACK_PATTERN = /<Sandpack(?:\s[^>]*)?>([\s\S]*?)<\/Sandpack>/gi;
+const FENCE_PATTERN = /```([\w+-]*)([^\n]*)\n([\s\S]*?)```/g;
+
+function extensionFor(language: string): string {
+  if (language === 'tsx' || language === 'typescript') return 'tsx';
+  if (language === 'ts') return 'ts';
+  if (language === 'jsx' || language === 'javascript') return 'js';
+  return language || 'txt';
+}
+
+function normalizeFilename(meta: string, language: string, index: number): string {
+  const explicit = meta.trim().match(/[\w./-]+\.[a-z0-9]+/i)?.[0];
+  if (explicit) {
+    const withoutPrefix = explicit.replace(/^\.?\/?src\//, '');
+    return `/${withoutPrefix}`;
+  }
+
+  if (['js', 'jsx', 'javascript', 'ts', 'tsx', 'typescript'].includes(language)) {
+    return index === 0 ? '/App.js' : `/Example${index + 1}.${extensionFor(language)}`;
+  }
+  if (language === 'css') return '/styles.css';
+  return `/example-${index + 1}.${extensionFor(language)}`;
+}
+
+export function parseSandpackFiles(content: string): Record<string, string> {
+  const files: Record<string, string> = {};
+  let match: RegExpExecArray | null;
+  let index = 0;
+  FENCE_PATTERN.lastIndex = 0;
+
+  while ((match = FENCE_PATTERN.exec(content))) {
+    const language = match[1].toLowerCase();
+    const filename = normalizeFilename(match[2], language, index);
+    files[filename] = match[3].trimEnd();
+    index += 1;
+  }
+
+  if (files['/styles.css'] && files['/App.js'] && !files['/App.js'].includes("'./styles.css'")) {
+    files['/App.js'] = `import './styles.css';\n${files['/App.js']}`;
+  }
+
+  return files;
+}
+
+export function splitMarkdown(content: string): MarkdownPart[] {
+  const parts: MarkdownPart[] = [];
+  let cursor = 0;
+  let match: RegExpExecArray | null;
+  SANDPACK_PATTERN.lastIndex = 0;
+
+  while ((match = SANDPACK_PATTERN.exec(content))) {
+    if (match.index > cursor) {
+      parts.push({ type: 'markdown', content: content.slice(cursor, match.index) });
+    }
+    const files = parseSandpackFiles(match[1]);
+    if (Object.keys(files).length) {
+      parts.push({ type: 'sandpack', files });
+    } else {
+      parts.push({ type: 'markdown', content: match[0] });
+    }
+    cursor = match.index + match[0].length;
+  }
+
+  if (cursor < content.length) {
+    parts.push({ type: 'markdown', content: content.slice(cursor) });
+  }
+
+  return parts.length ? parts : [{ type: 'markdown', content }];
+}

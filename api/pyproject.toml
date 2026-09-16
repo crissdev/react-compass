@@ -1,0 +1,33 @@
+[project]
+name = "react-docs-chat-api"
+version = "0.1.0"
+description = "Grounded React documentation search API"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi[standard]>=0.141.1",
+  "langchain>=1.4.0",
+  "langchain-chroma>=1.1.0",
+  "langchain-core>=1.6.3",
+  "langchain-openai>=1.6.0",
+  "langchain-text-splitters>=1.1.2",
+  "pydantic-settings>=2.15.0",
+  "python-dotenv>=1.2.3",
+]
+
+[dependency-groups]
+dev = [
+  "httpx>=0.28.1",
+  "pytest>=9.1.1",
+  "ruff>=0.15.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]

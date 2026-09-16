@@ -1,0 +1,27 @@
+.DS_Store
+.idea/
+.vscode/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.sample
+
+# Local vector database
+data/
+
+# Python
+api/.venv/
+api/.pytest_cache/
+api/.ruff_cache/
+api/**/__pycache__/
+api/**/*.py[cod]
+
+# Next.js
+web/node_modules/
+web/.next/
+web/out/
+web/coverage/
+web/next-env.d.ts
+web/*.tsbuildinfo
+.pnpm-store/
