@@ -134,11 +134,21 @@ export function DocChat() {
           <span>DocChat</span>
         </a>
         <nav aria-label="Source links">
-          <a href="https://react.dev" target="_blank" rel="noreferrer">
-            <BookOpen size={16} /> React docs
+          <a
+            href="https://react.dev"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Open React documentation"
+          >
+            <BookOpen size={16} /> <span>React docs</span>
           </a>
-          <a href="https://github.com/facebook/react" target="_blank" rel="noreferrer">
-            <Github size={16} /> GitHub
+          <a
+            href="https://github.com/facebook/react"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Open React GitHub repository"
+          >
+            <Github size={16} /> <span>GitHub</span>
           </a>
           <ThemeToggle />
         </nav>
