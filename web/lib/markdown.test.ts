@@ -32,7 +32,7 @@ h1 { color: teal; }
     const content = 'Read [1] and [4]. Keep `[1]` and ```js\nconst ref = "[1]";\n``` unchanged.';
 
     expect(linkSourceCitations(content, [1])).toBe(
-      'Read [1](#docchat-source-1) and [4]. Keep `[1]` and ```js\nconst ref = "[1]";\n``` unchanged.',
+      'Read[1](#docchat-source-1) and [4]. Keep `[1]` and ```js\nconst ref = "[1]";\n``` unchanged.',
     );
   });
 

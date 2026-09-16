@@ -13,7 +13,7 @@ const UNTERMINATED_PROSE_FENCE_PATTERN =
 const STRAY_CITATION_FENCE_PATTERN = /^[ \t]*(?:`{3,}|~{3,})[ \t]+(?=\[\d+\](?:\s|$))/gm;
 const REACT_NOTE_PATTERN = /<Note>\s*([\s\S]*?)\s*<\/Note>/gi;
 const CODE_PATTERN = /(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`)/g;
-const CITATION_PATTERN = /(?<!\\)\[(\d+)\](?!\s*[:(])/g;
+const CITATION_PATTERN = /([ \t]*)(?<!\\)\[(\d+)\](?!\s*[:(])/g;
 const SOURCE_CITATION_PREFIX = '#docchat-source-';
 
 export function sourceCitationHref(citation: number): string {
@@ -35,7 +35,7 @@ export function linkSourceCitations(content: string, citations: readonly number[
     .map((segment, index) => {
       if (index % 2 === 1) return segment;
 
-      return segment.replace(CITATION_PATTERN, (match, value: string) => {
+      return segment.replace(CITATION_PATTERN, (match, _leadingSpace: string, value: string) => {
         const citation = Number(value);
         return availableCitations.has(citation)
           ? `[${citation}](${sourceCitationHref(citation)})`

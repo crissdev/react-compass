@@ -53,7 +53,9 @@ export function AnswerView({ answer }: { answer: Answer }) {
                           href={source.source_url}
                           target="_blank"
                           rel="noreferrer"
-                          aria-label={`Open source ${source.citation}: ${source.title} in a new tab`}
+                          hidden
+                          aria-hidden="true"
+                          data-debug-source-citation={source.citation}
                           title={`${source.title}${source.section ? ` — ${source.section}` : ''}`}
                         >
                           <FileText size={11} aria-hidden="true" />
