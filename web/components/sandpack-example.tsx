@@ -2,6 +2,7 @@
 
 import type { SandpackTheme } from '@codesandbox/sandpack-react';
 import dynamic from 'next/dynamic';
+import { useTheme } from '@/lib/theme';
 
 const reactDocsTheme: SandpackTheme = {
   colors: {
@@ -35,6 +36,33 @@ const reactDocsTheme: SandpackTheme = {
   },
 };
 
+const reactDocsDarkTheme: SandpackTheme = {
+  colors: {
+    accent: '#58c4dc',
+    base: '#f0f6fc',
+    clickable: '#a9b4be',
+    disabled: '#6e7681',
+    error: '#ff7b72',
+    errorSurface: '#3b2023',
+    hover: '#2d333b',
+    surface1: '#16181d',
+    surface2: '#343a46',
+    surface3: '#23272f',
+  },
+  syntax: {
+    plain: '#f0f6fc',
+    comment: '#8b949e',
+    keyword: '#77b7d7',
+    tag: '#dfab5c',
+    punctuation: '#f0f6fc',
+    definition: '#86d9ca',
+    property: '#77b7d7',
+    static: '#c64640',
+    string: '#977cdc',
+  },
+  font: reactDocsTheme.font,
+};
+
 const Sandpack = dynamic(
   () => import('@codesandbox/sandpack-react').then((module) => module.Sandpack),
   {
@@ -44,12 +72,14 @@ const Sandpack = dynamic(
 );
 
 export function SandpackExample({ files }: { files: Record<string, string> }) {
+  const theme = useTheme();
+
   return (
     <div className="sandpack-shell" aria-label="Interactive React example">
       <Sandpack
         template="react"
         files={files}
-        theme={reactDocsTheme}
+        theme={theme === 'dark' ? reactDocsDarkTheme : reactDocsTheme}
         options={{
           showNavigator: true,
           showTabs: true,

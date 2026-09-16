@@ -5,6 +5,7 @@ import { ArrowUp, BookOpen, CircleStop, Github, Sparkles } from 'lucide-react';
 import { readAnswerStream } from '@/lib/answer-stream';
 import type { Answer } from '@/lib/types';
 import { AnswerView } from './answer-view';
+import { ThemeToggle } from './theme-toggle';
 
 const suggestions = [
   {
@@ -112,6 +113,7 @@ export function DocChat() {
           <a href="https://github.com/facebook/react" target="_blank" rel="noreferrer">
             <Github size={16} /> GitHub
           </a>
+          <ThemeToggle />
         </nav>
       </header>
 
