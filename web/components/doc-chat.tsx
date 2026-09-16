@@ -102,10 +102,10 @@ export function DocChat() {
       <div className="ambient ambient-two" />
 
       <header className="topbar">
-        <a className="brand" href="#top" aria-label="React DocChat home">
+        <div className="brand">
           <span className="brand-icon">R</span>
           <span>DocChat</span>
-        </a>
+        </div>
         <nav aria-label="Source links">
           <a href="https://react.dev" target="_blank" rel="noreferrer">
             <BookOpen size={16} /> React docs
