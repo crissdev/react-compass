@@ -94,8 +94,10 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  color: inherit;
   font-weight: 760;
   letter-spacing: -0.02em;
+  text-decoration: none;
 }
 
 .brand-icon,

@@ -36,7 +36,6 @@ export function SearchHistory({
           <HistoryIcon size={15} aria-hidden="true" />
           <h2 id="search-history-heading">Search history</h2>
         </div>
-        <span>Answers refresh weekly</span>
       </div>
       <ul>
         {items.map((item) => (

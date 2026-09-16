@@ -127,10 +127,12 @@ export function DocChat() {
       <div className="ambient ambient-two" />
 
       <header className="topbar">
-        <div className="brand">
+        {/* A native anchor intentionally reloads the app and clears the current client state. */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+        <a className="brand" href="/" aria-label="Reload DocChat and start a new search">
           <span className="brand-icon">R</span>
           <span>DocChat</span>
-        </div>
+        </a>
         <nav aria-label="Source links">
           <a href="https://react.dev" target="_blank" rel="noreferrer">
             <BookOpen size={16} /> React docs
