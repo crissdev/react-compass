@@ -5,7 +5,7 @@ A small React documentation assistant built as two local applications in one wor
 - `web/` — Next.js UI and backend-for-frontend proxy
 - `api/` — FastAPI, LangChain, and the existing Chroma collection
 
-The answer pipeline first classifies every question for React relevance and prompt-injection attempts. React questions continue through retrieval and grounded answer generation; other inputs receive a fixed scope notice without running RAG. The UI streams progress events, renders highlighted code, and turns React docs-style `<Sandpack>` examples into editable previews. The browser keeps the 15 most recent questions. Next.js checks the uncached classification gate before entering its weekly stale-while-revalidate answer cache, so scope notices are never added to that cache. Removing a history entry also invalidates its cached React answer.
+The answer pipeline classifies every uncached question for React relevance and prompt-injection attempts. React questions continue through retrieval and grounded answer generation; other inputs receive a fixed scope notice without running RAG. The UI streams progress events, renders highlighted code, and turns React docs-style `<Sandpack>` examples into editable previews. The browser keeps the 15 most recent questions. Next.js caches React answers for a week and immediately invalidates scope notices, so cache misses are classified exactly once by the API. Removing a history entry also invalidates its cached React answer.
 
 ## Run locally
 

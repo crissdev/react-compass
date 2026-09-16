@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  classifyQuestion: vi.fn(),
   getCachedAnswer: vi.fn(),
   revalidateTag: vi.fn(),
 }));
@@ -15,10 +14,6 @@ vi.mock('@/lib/answer-cache', () => ({
   getCachedAnswer: mocks.getCachedAnswer,
 }));
 
-vi.mock('@/lib/question-gate', () => ({
-  classifyQuestion: mocks.classifyQuestion,
-}));
-
 import { POST } from './route';
 
 describe('POST /api/ask', () => {
@@ -30,7 +25,7 @@ describe('POST /api/ask', () => {
     vi.useRealTimers();
   });
 
-  it('reads the answer cache without classifying the question first', async () => {
+  it('reads the answer cache before doing any upstream work', async () => {
     const answer = {
       kind: 'react_answer' as const,
       message: 'A cached answer',
@@ -51,7 +46,6 @@ describe('POST /api/ask', () => {
       .map((line) => JSON.parse(line));
 
     expect(mocks.getCachedAnswer).toHaveBeenCalledWith('How does useState work?');
-    expect(mocks.classifyQuestion).not.toHaveBeenCalled();
     expect(events).toEqual([
       {
         type: 'status',
