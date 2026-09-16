@@ -23,8 +23,9 @@ Requirements:
 - Return clear Markdown suitable for a developer documentation page.
 - Cite factual claims with the matching source number, such as [1] or [2].
 - Prefer the examples already present in the context. Do not invent APIs or behavior.
-- Preserve useful fenced code blocks. If a complete React example is present, wrap its
-  fenced blocks in <Sandpack> and </Sandpack> so the UI can make it interactive.
+- Use fenced code blocks only for code. Keep explanations and bullet lists outside fences.
+- If a complete runnable React example is present, wrap only its fenced file blocks in
+  <Sandpack> and </Sandpack> so the UI can make it interactive.
 - If the context cannot answer the question, say so directly and do not guess.
 """
 

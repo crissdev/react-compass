@@ -4,6 +4,10 @@ export type MarkdownPart =
 
 const SANDPACK_PATTERN = /<Sandpack(?:\s[^>]*)?>([\s\S]*?)<\/Sandpack>/gi;
 const FENCE_PATTERN = /```([\w+-]*)([^\n]*)\n([\s\S]*?)```/g;
+const PROSE_FENCE_PATTERN =
+  /^[ \t]{0,3}(`{3,}|~{3,})[ \t]*(?:text|markdown|md)?[ \t]*\r?\n([\s\S]*?)^[ \t]{0,3}\1[ \t]*$/gim;
+const UNTERMINATED_PROSE_FENCE_PATTERN =
+  /^[ \t]{0,3}(?:`{3,}|~{3,})[ \t]*(?:text|markdown|md)?[ \t]*\r?\n([\s\S]*?)(?=\r?\n<Sandpack(?:\s|>))/gim;
 const CODE_PATTERN = /(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`)/g;
 const CITATION_PATTERN = /(?<!\\)\[(\d+)\](?!\s*[:(])/g;
 const SOURCE_CITATION_PREFIX = '#docchat-source-';
@@ -35,6 +39,27 @@ export function linkSourceCitations(content: string, citations: readonly number[
       });
     })
     .join('');
+}
+
+export function unwrapProseFences(content: string): string {
+  const unwrapIfProseList = (fence: string, body: string): string => {
+    const lines = body
+      .trim()
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const isProseList = lines.length > 1 && lines.every((line) => /^[-*]\s+\S/.test(line));
+
+    return isProseList ? `\n${body.trim()}\n` : fence;
+  };
+
+  return content
+    .replace(PROSE_FENCE_PATTERN, (fence, _marker: string, body: string) =>
+      unwrapIfProseList(fence, body),
+    )
+    .replace(UNTERMINATED_PROSE_FENCE_PATTERN, (fence, body: string) =>
+      unwrapIfProseList(fence, body),
+    );
 }
 
 function extensionFor(language: string): string {

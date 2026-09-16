@@ -604,44 +604,86 @@ a {
 .sandpack-shell {
   overflow: hidden;
   margin: 28px 0;
-  border: 1px solid #dce6e9;
-  border-radius: 18px;
-  background: #111f27;
-}
-
-.example-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  color: #b8c9d0;
-  background: #10252f;
-  font-size: 11px;
-  font-weight: 750;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.live-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 99px;
-  background: #68d391;
-  box-shadow: 0 0 0 4px rgba(104, 211, 145, 0.12);
+  border: 1px solid #d9dee3;
+  border-radius: 12px;
+  background: #e4e7eb;
+  box-shadow: 0 8px 24px rgba(35, 39, 47, 0.08);
 }
 
 .sandpack-loading {
   min-height: 280px;
   display: grid;
   place-items: center;
-  color: #aabcc3;
-  background: #132a36;
+  color: #65727c;
+  background: #f6f7f9;
   font-size: 13px;
 }
 
-.sp-wrapper {
+.sandpack-shell .sp-wrapper {
+  width: 100%;
   border: 0 !important;
   border-radius: 0 !important;
+  font-size: 13.6px;
+  line-height: 24px;
+}
+
+.sandpack-shell .sp-layout {
+  gap: 1px;
+  border: 0;
+  border-radius: 0;
+  background: #e4e7eb;
+}
+
+.sandpack-shell .sp-tabs,
+.sandpack-shell .sp-navigator {
+  min-height: 40px;
+  border-color: #e4e7eb;
+  background: #f6f7f9;
+}
+
+.sandpack-shell .sp-tab-button {
+  color: #5f6b76;
+  border-bottom: 2px solid transparent;
+}
+
+.sandpack-shell .sp-tab-button[data-active='true'] {
+  color: #087ea4;
+  border-bottom-color: #087ea4;
+}
+
+.sandpack-shell .sp-code-editor,
+.sandpack-shell .cm-editor {
+  background: #fff;
+}
+
+.sandpack-shell .sp-preview-container {
+  background: #fff;
+}
+
+.sandpack-shell .sp-preview-iframe {
+  background: #fff;
+}
+
+.sandpack-shell .sp-preview-actions .sp-button {
+  color: #087ea4;
+  background: #fff;
+  border: 1px solid #d9dee3;
+  box-shadow: 0 2px 8px rgba(35, 39, 47, 0.1);
+}
+
+@media (max-width: 720px) {
+  .sandpack-shell .sp-layout {
+    flex-direction: column;
+  }
+
+  .sandpack-shell .sp-stack {
+    width: 100% !important;
+    min-width: 100% !important;
+  }
+
+  .sandpack-shell .sp-resize-handler {
+    display: none;
+  }
 }
 
 footer {

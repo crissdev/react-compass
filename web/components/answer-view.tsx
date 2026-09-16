@@ -4,14 +4,19 @@ import { ExternalLink, FileText } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';
-import { citationFromHref, linkSourceCitations, splitMarkdown } from '@/lib/markdown';
+import {
+  citationFromHref,
+  linkSourceCitations,
+  splitMarkdown,
+  unwrapProseFences,
+} from '@/lib/markdown';
 import type { Answer } from '@/lib/types';
 import { SandpackExample } from './sandpack-example';
 
 export function AnswerView({ answer }: { answer: Answer }) {
   const sourcesByCitation = new Map(answer.sources.map((source) => [source.citation, source]));
   const message = linkSourceCitations(
-    answer.message,
+    unwrapProseFences(answer.message),
     answer.sources.filter((source) => source.source_url).map((source) => source.citation),
   );
   const parts = splitMarkdown(message);

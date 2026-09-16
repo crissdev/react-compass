@@ -5,6 +5,7 @@ import {
   parseSandpackFiles,
   sourceCitationHref,
   splitMarkdown,
+  unwrapProseFences,
 } from './markdown';
 
 describe('React docs Sandpack parsing', () => {
@@ -40,5 +41,34 @@ h1 { color: teal; }
     expect(citationFromHref('#docchat-source-3')).toBe(3);
     expect(citationFromHref('#docchat-source-nope')).toBeNull();
     expect(citationFromHref('https://react.dev')).toBeNull();
+  });
+
+  it('turns a prose-only fenced list back into Markdown', () => {
+    const content = 'Before\n````\n- First explanation\n- Second explanation\n````\nAfter';
+
+    expect(unwrapProseFences(content)).toBe(
+      'Before\n\n- First explanation\n- Second explanation\n\nAfter',
+    );
+  });
+
+  it('recovers a prose fence left open immediately before a Sandpack', () => {
+    const content =
+      '~~~\n- First explanation\n- Second explanation\n\n<Sandpack>\n```js\nexport default () => null\n```\n</Sandpack>';
+
+    expect(unwrapProseFences(content)).toBe(
+      '\n- First explanation\n- Second explanation\n\n<Sandpack>\n```js\nexport default () => null\n```\n</Sandpack>',
+    );
+  });
+
+  it('preserves real code and single-line text fences', () => {
+    expect(unwrapProseFences('```js\nconst value = 1;\n```')).toBe(
+      '```js\nconst value = 1;\n```',
+    );
+    expect(unwrapProseFences('```text\n- a command argument\n```')).toBe(
+      '```text\n- a command argument\n```',
+    );
+    expect(unwrapProseFences('```diff\n- removed first line\n- removed second line\n```')).toBe(
+      '```diff\n- removed first line\n- removed second line\n```',
+    );
   });
 });
