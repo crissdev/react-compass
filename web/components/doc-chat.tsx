@@ -1,8 +1,10 @@
 'use client';
 
-import { FormEvent, MouseEvent, useRef, useState } from 'react';
-import { ArrowUp, BookOpen, CircleStop, Github, Sparkles } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { FormEvent, MouseEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { ArrowLeft, ArrowUp, BookOpen, CircleStop, Github, Sparkles } from 'lucide-react';
 import { readAnswerStream } from '@/lib/answer-stream';
+import { normalizeQuestion, questionHref } from '@/lib/questions';
 import { addSearchHistoryItem, removeSearchHistoryItem } from '@/lib/search-history';
 import { saveSearchHistory, useSearchHistory } from '@/lib/search-history-store';
 import type { Answer } from '@/lib/types';
@@ -29,19 +31,29 @@ const suggestions = [
   },
 ];
 
-export function DocChat() {
-  const [question, setQuestion] = useState('');
+type DocChatProps = {
+  initialQuestion?: string;
+  showDashboardLink?: boolean;
+};
+
+export function DocChat({ initialQuestion = '', showDashboardLink = false }: DocChatProps) {
+  const normalizedInitialQuestion = normalizeQuestion(initialQuestion);
+  const [question, setQuestion] = useState(normalizedInitialQuestion);
   const [answer, setAnswer] = useState<Answer | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [status, setStatus] = useState('');
+  const [isLoading, setIsLoading] = useState(normalizedInitialQuestion.length >= 2);
+  const [status, setStatus] = useState(
+    normalizedInitialQuestion.length >= 2 ? 'Connecting to the documentation index' : '',
+  );
   const [error, setError] = useState('');
   const [removingQuestion, setRemovingQuestion] = useState<string | null>(null);
   const searchHistory = useSearchHistory();
+  const router = useRouter();
   const controllerRef = useRef<AbortController | null>(null);
+  const initialSearchStartedRef = useRef(false);
 
-  async function ask(nextQuestion = question) {
-    const value = nextQuestion.trim();
-    if (value.length < 2 || isLoading) return;
+  const runSearch = useCallback(async (nextQuestion: string) => {
+    const value = normalizeQuestion(nextQuestion);
+    if (value.length < 2) return;
 
     setQuestion(value);
     setAnswer(null);
@@ -87,11 +99,25 @@ export function DocChat() {
         setIsLoading(false);
       }
     }
+  }, [searchHistory]);
+
+  useEffect(() => {
+    if (initialSearchStartedRef.current || normalizedInitialQuestion.length < 2) return;
+    initialSearchStartedRef.current = true;
+    void runSearch(normalizedInitialQuestion);
+  }, [normalizedInitialQuestion, runSearch]);
+
+  function navigateToQuestion(nextQuestion = question) {
+    const value = normalizeQuestion(nextQuestion);
+    if (value.length < 2 || isLoading) return;
+
+    setQuestion(value);
+    router.push(questionHref(value));
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    void ask();
+    navigateToQuestion();
   }
 
   function cancel(event: MouseEvent<HTMLButtonElement>) {
@@ -133,7 +159,14 @@ export function DocChat() {
           <span className="brand-icon">R</span>
           <span>DocChat</span>
         </a>
-        <nav aria-label="Source links">
+        <nav aria-label="Primary navigation">
+          {showDashboardLink && (
+            // A native anchor clears preserved route state when returning to the dashboard.
+            // eslint-disable-next-line @next/next/no-html-link-for-pages
+            <a href="/" aria-label="Back to dashboard">
+              <ArrowLeft size={16} /> <span>Dashboard</span>
+            </a>
+          )}
           <a
             href="https://react.dev"
             target="_blank"
@@ -217,7 +250,7 @@ export function DocChat() {
                   <button
                     type="button"
                     key={suggestion.label}
-                    onClick={() => void ask(suggestion.question)}
+                    onClick={() => navigateToQuestion(suggestion.question)}
                   >
                     <span>{suggestion.label}</span>
                     {suggestion.question}
@@ -229,7 +262,7 @@ export function DocChat() {
             <SearchHistory
               items={searchHistory}
               removingQuestion={removingQuestion}
-              onSelect={(historyQuestion) => void ask(historyQuestion)}
+              onSelect={navigateToQuestion}
               onRemove={(historyQuestion) => void removeHistory(historyQuestion)}
             />
           </>
