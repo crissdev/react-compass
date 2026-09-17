@@ -6,7 +6,7 @@ from langchain_core.documents import Document
 
 from app.main import app
 from app.models import AnswerResponse, QuestionClassification, SourceExcerpt
-from app.service import format_sources, get_search_service, scope_notice_response
+from app.service import format_context, format_sources, get_search_service, scope_notice_response
 
 
 class FakeSearchService:
@@ -64,6 +64,19 @@ def test_format_sources_deduplicates_and_truncates() -> None:
     assert len(sources[0].excerpt) <= 420
     assert sources[0].excerpt.endswith("...")
     assert sources[0].source_url == "https://react.dev/reference/react/useState"
+
+
+def test_format_context_uses_bare_numeric_citation_markers() -> None:
+    documents = [
+        Document(page_content="First excerpt", metadata={"title": "First source"}),
+        Document(page_content="Second excerpt", metadata={"title": "Second source"}),
+    ]
+
+    context = format_context(documents)
+
+    assert context.startswith("[1] First source")
+    assert "[2] Second source" in context
+    assert "[SOURCE" not in context
 
 
 def test_stream_returns_status_and_result_events() -> None:

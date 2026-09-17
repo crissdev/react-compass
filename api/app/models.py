@@ -9,7 +9,10 @@ class AskRequest(BaseModel):
 
 class GeneratedAnswer(BaseModel):
     message: str = Field(
-        description="A grounded Markdown answer. Use [1], [2], and so on for source citations."
+        description=(
+            "A grounded Markdown answer. Cite sources using only bare numeric markers such as "
+            "[1] and [2], never labeled markers such as [SOURCE 1]."
+        )
     )
 
 
