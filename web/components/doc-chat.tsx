@@ -188,8 +188,8 @@ export function DocChat({ initialQuestion = '' }: DocChatProps) {
           <span> Understand the why.</span>
         </h1>
         <p className="hero-copy">
-          Search the React reference and learning guides. Get a focused answer with source excerpts
-          and runnable examples.
+          Search the React reference and learning guides. Get a focused answer with citations and
+          runnable examples.
         </p>
 
         <form className="search-form" onSubmit={submit}>
