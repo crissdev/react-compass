@@ -1,4 +1,4 @@
-# React DocChat
+# React Compass
 
 A small React documentation assistant built as two local applications in one workspace:
 

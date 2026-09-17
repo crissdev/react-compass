@@ -15,7 +15,7 @@ from app.service import ReactDocsSearchService, get_search_service, scope_notice
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-app = FastAPI(title="React DocChat API", version="0.1.0")
+app = FastAPI(title="React Compass API", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,

@@ -34,7 +34,7 @@ export function AnswerView({ answer }: { answer: Answer }) {
         <div className="answer-heading">
           <span className="answer-mark">R</span>
           <div>
-            <p className="eyebrow">React DocChat</p>
+            <p className="eyebrow">React Compass</p>
             <h2>{hasSources ? 'Answer from the docs' : 'React questions only'}</h2>
           </div>
         </div>

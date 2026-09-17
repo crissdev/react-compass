@@ -1,4 +1,4 @@
-"""React DocChat API."""
+"""React Compass API."""
 
 from dotenv import load_dotenv
 

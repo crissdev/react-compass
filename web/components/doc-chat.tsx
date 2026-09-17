@@ -154,9 +154,9 @@ export function DocChat({ initialQuestion = '' }: DocChatProps) {
       <header className="topbar">
         {/* A native anchor intentionally reloads the app and clears the current client state. */}
         {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-        <a className="brand" href="/" aria-label="Reload DocChat and start a new search">
+        <a className="brand" href="/" aria-label="Reload React Compass and start a new search">
           <span className="brand-icon">R</span>
-          <span>DocChat</span>
+          <span>React Compass</span>
         </a>
         <nav aria-label="Source links">
           <a
@@ -265,7 +265,7 @@ export function DocChat({ initialQuestion = '' }: DocChatProps) {
 
       <footer>
         {answer?.kind === 'scope_notice'
-          ? 'DocChat answers questions about React and its official documentation.'
+          ? 'React Compass answers questions about React and its official documentation.'
           : 'Answers are generated from retrieved documentation. Check the cited source for details.'}
       </footer>
     </main>
