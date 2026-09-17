@@ -22,9 +22,16 @@ const CITATION_PATTERN = /([ \t]*)(?<!\\)\[(\d+)\](?!\s*[:(])/g;
 const SOURCE_CITATION_PREFIX = '#docchat-source-';
 const MARKDOWN_HEADING_PATTERN = /^[ \t]{0,3}(#{1,6})[ \t]+(.+?)[ \t]*#*[ \t]*$/gm;
 const REACT_DOCS_ANCHOR_PATTERN = /[ \t]*\{\/\*[a-z0-9_-]+\*\/\}/gi;
+const LEADING_MARKDOWN_HEADING_PATTERN =
+  /^[ \t]{0,3}#{1,6}[ \t]+(.+?)[ \t]*#*[ \t]*(?:\r?\n|$)/;
 
-export function cleanSourceExcerpt(content: string): string {
-  return content.replace(REACT_DOCS_ANCHOR_PATTERN, '');
+export function cleanSourceExcerpt(content: string, section?: string | null): string {
+  const cleaned = content.replace(REACT_DOCS_ANCHOR_PATTERN, '');
+  const heading = cleaned.match(LEADING_MARKDOWN_HEADING_PATTERN);
+
+  if (!section || !heading || heading[1].trim() !== section.trim()) return cleaned;
+
+  return cleaned.slice(heading[0].length).replace(/^\r?\n/, '');
 }
 
 export function sourceCitationHref(citation: number): string {

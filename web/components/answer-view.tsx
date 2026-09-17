@@ -129,7 +129,7 @@ export function AnswerView({ answer }: { answer: Answer }) {
                         a: ({ children }) => <>{children}</>,
                       }}
                     >
-                      {cleanSourceExcerpt(source.excerpt)}
+                      {cleanSourceExcerpt(source.excerpt, source.section)}
                     </ReactMarkdown>
                   </div>
                 </div>

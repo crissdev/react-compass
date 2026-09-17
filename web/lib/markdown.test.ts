@@ -11,12 +11,22 @@ import {
 } from './markdown';
 
 describe('React docs Sandpack parsing', () => {
-  it('removes React docs heading anchors from source excerpts', () => {
+  it('removes a leading source heading already displayed as the section', () => {
     expect(
       cleanSourceExcerpt(
         '## Where you can cause side effects {/*where-you-_can_-cause-side-effects*/}\n\n**Prefer events.**',
+        'Where you can cause side effects',
       ),
-    ).toBe('## Where you can cause side effects\n\n**Prefer events.**');
+    ).toBe('**Prefer events.**');
+  });
+
+  it('preserves a leading source heading that differs from the section', () => {
+    expect(
+      cleanSourceExcerpt(
+        '### Nested guidance {/*nested-guidance*/}\n\nKeep this heading.',
+        'Parent section',
+      ),
+    ).toBe('### Nested guidance\n\nKeep this heading.');
   });
 
   it('maps React docs filenames and adds the stylesheet import', () => {
