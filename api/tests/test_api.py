@@ -79,6 +79,42 @@ def test_format_sources_preserves_markdown_structure() -> None:
     )
 
 
+def test_format_sources_links_to_the_most_specific_heading_anchor() -> None:
+    document = Document(
+        page_content=(
+            "### Reusing logic with custom Hooks "
+            "{/*reusing-logic-with-custom-hooks*/}\n\nShare reusable behavior."
+        ),
+        metadata={
+            "h2": "Escape Hatches {/*escape-hatches*/}",
+            "h3": "Reusing logic with custom Hooks {/*reusing-logic-with-custom-hooks*/}",
+            "source_url": "https://react.dev/learn/escape-hatches",
+        },
+    )
+
+    source = format_sources([document])[0]
+
+    assert source.source_url == (
+        "https://react.dev/learn/escape-hatches#reusing-logic-with-custom-hooks"
+    )
+
+
+def test_format_sources_falls_back_to_the_chunk_heading_anchor() -> None:
+    document = Document(
+        page_content=(
+            "## Where you can cause side effects "
+            "{/*where-you-_can_-cause-side-effects*/}\n\nUse event handlers."
+        ),
+        metadata={"source_url": "https://react.dev/learn/keeping-components-pure"},
+    )
+
+    source = format_sources([document])[0]
+
+    assert source.source_url == (
+        "https://react.dev/learn/keeping-components-pure#where-you-_can_-cause-side-effects"
+    )
+
+
 def test_format_context_uses_bare_numeric_citation_markers() -> None:
     documents = [
         Document(page_content="First excerpt", metadata={"title": "First source"}),

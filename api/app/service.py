@@ -1,4 +1,5 @@
 import asyncio
+import re
 from collections.abc import Sequence
 from functools import lru_cache
 from typing import Any
@@ -56,6 +57,11 @@ SCOPE_NOTICE = (
     "React reference and learning guides."
 )
 
+REACT_DOCS_ANCHOR_PATTERN = re.compile(r"\{/\*([A-Za-z0-9_-]+)\*/\}")
+MARKDOWN_HEADING_ANCHOR_PATTERN = re.compile(
+    r"^#{1,6}\s+.*?\{/\*([A-Za-z0-9_-]+)\*/\}\s*$", re.MULTILINE
+)
+
 
 def _source_type(value: Any) -> str:
     normalized = str(value or "unknown").lower()
@@ -69,13 +75,29 @@ def _source_url(value: Any) -> str:
     return url
 
 
+def _source_anchor(metadata: dict[str, Any], content: str) -> str | None:
+    for heading in ("h3", "h2", "h1"):
+        match = REACT_DOCS_ANCHOR_PATTERN.search(str(metadata.get(heading) or ""))
+        if match:
+            return match.group(1)
+
+    match = MARKDOWN_HEADING_ANCHOR_PATTERN.search(content)
+    return match.group(1) if match else None
+
+
+def _source_url_with_anchor(url: str, metadata: dict[str, Any], content: str) -> str:
+    anchor = _source_anchor(metadata, content)
+    return f"{url.partition('#')[0]}#{anchor}" if url and anchor else url
+
+
 def format_sources(documents: Sequence[Document]) -> list[SourceExcerpt]:
     sources: list[SourceExcerpt] = []
     seen: set[tuple[str, str]] = set()
 
     for index, document in enumerate(documents, start=1):
         metadata = document.metadata
-        url = _source_url(metadata.get("source_url") or metadata.get("source"))
+        page_url = _source_url(metadata.get("source_url") or metadata.get("source"))
+        url = _source_url_with_anchor(page_url, metadata, document.page_content)
         section = str(metadata.get("section") or metadata.get("h2") or "").strip()
         key = (url, section)
         if key in seen:

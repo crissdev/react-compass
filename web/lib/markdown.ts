@@ -21,7 +21,7 @@ const CODE_PATTERN = /(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`)/g;
 const CITATION_PATTERN = /([ \t]*)(?<!\\)\[(\d+)\](?!\s*[:(])/g;
 const SOURCE_CITATION_PREFIX = '#docchat-source-';
 const MARKDOWN_HEADING_PATTERN = /^[ \t]{0,3}(#{1,6})[ \t]+(.+?)[ \t]*#*[ \t]*$/gm;
-const REACT_DOCS_ANCHOR_PATTERN = /[ \t]*\{\/\*[a-z0-9-]+\*\/\}/gi;
+const REACT_DOCS_ANCHOR_PATTERN = /[ \t]*\{\/\*[a-z0-9_-]+\*\/\}/gi;
 
 export function cleanSourceExcerpt(content: string): string {
   return content.replace(REACT_DOCS_ANCHOR_PATTERN, '');

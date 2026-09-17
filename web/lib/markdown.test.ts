@@ -14,9 +14,9 @@ describe('React docs Sandpack parsing', () => {
   it('removes React docs heading anchors from source excerpts', () => {
     expect(
       cleanSourceExcerpt(
-        '## You might not need an Effect {/*you-might-not-need-an-effect*/}\n\n**Prefer events.**',
+        '## Where you can cause side effects {/*where-you-_can_-cause-side-effects*/}\n\n**Prefer events.**',
       ),
-    ).toBe('## You might not need an Effect\n\n**Prefer events.**');
+    ).toBe('## Where you can cause side effects\n\n**Prefer events.**');
   });
 
   it('maps React docs filenames and adds the stylesheet import', () => {
