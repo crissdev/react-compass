@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     )
 
     model_name: str
+    embedding_model: str
     chroma_path: Path
     chroma_collection: str = "react-docs"
     react_dev_root: Path

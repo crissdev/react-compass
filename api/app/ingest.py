@@ -2,6 +2,7 @@ from pathlib import Path
 
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
+from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 
 from app.config import get_settings
@@ -18,14 +19,32 @@ def source_url(source_type: str, root: Path, file: Path) -> str:
     return f"https://react.dev/{source_type}/{relative.as_posix()}".rstrip("/")
 
 
+def frontmatter_title(content: str) -> str | None:
+    lines = content.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return None
+
+    for line in lines[1:]:
+        if line.strip() == "---":
+            break
+        key, separator, value = line.partition(":")
+        if separator and key.strip() == "title":
+            return value.strip().strip("\"'") or None
+
+    return None
+
+
 def documents_for_file(source_type: str, root: Path, file: Path) -> list[Document]:
     content = file.read_text(encoding="utf-8")
     splitter = MarkdownHeaderTextSplitter(
         headers_to_split_on=[("#", "h1"), ("##", "h2"), ("###", "h3")],
         strip_headers=False,
     )
-    documents = splitter.split_text(content)
-    title = str(documents[0].metadata.get("h1") if documents else file.stem)
+    documents = [
+        document for document in splitter.split_text(content) if document.metadata.get("h2")
+    ]
+    heading_title = documents[0].metadata.get("h1") if documents else None
+    title = frontmatter_title(content) or str(heading_title or file.stem)
 
     for document in documents:
         section = document.metadata.get("h3") or document.metadata.get("h2") or title
@@ -47,6 +66,7 @@ def main() -> None:
     store = Chroma(
         persist_directory=str(settings.chroma_path),
         collection_name=settings.chroma_collection,
+        embedding_function=OpenAIEmbeddings(model=settings.embedding_model),
     )
     roots = {
         "reference": settings.react_docs_reference_path,

@@ -10,6 +10,7 @@ from langchain_core.documents import Document
 from langchain_core.language_models import BaseChatModel
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable
+from langchain_openai import OpenAIEmbeddings
 from langsmith import traceable
 
 from app.config import Settings, get_settings
@@ -200,6 +201,7 @@ def get_search_service() -> ReactDocsSearchService:
     store = Chroma(
         persist_directory=str(settings.chroma_path),
         collection_name=settings.chroma_collection,
+        embedding_function=OpenAIEmbeddings(model=settings.embedding_model),
     )
     model = init_chat_model(settings.model_name)
     return ReactDocsSearchService(model, store, settings.retrieval_count)

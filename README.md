@@ -23,7 +23,8 @@ The answer pipeline classifies every uncached question for React relevance and p
 
    The API is expected to run with `api/` as its working directory. `CHROMA_PATH` and
    `REACT_DEV_ROOT` may be absolute, or relative to that directory. `ALLOWED_ORIGINS` is
-   a comma-separated list.
+   a comma-separated list. `EMBEDDING_MODEL` selects the OpenAI embedding model used by both
+   ingestion and retrieval; changing it requires rebuilding the Chroma database.
 
 3. Copy `web/.env.sample` to `web/.env.local` if the API does not run at `http://127.0.0.1:8000`.
 4. Start the API:
@@ -46,9 +47,10 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Data
 
-The existing Chroma collection is copied to `data/embeddings`. The directory is local-only and
+The generated Chroma collection is stored in `data/embeddings`. The directory is local-only and
 Git-ignored because it contains generated vector data. From the `api/` working directory,
-`CHROMA_PATH=../data/embeddings` selects it.
+`CHROMA_PATH=../data/embeddings` selects it. Ingestion indexes sections beginning at the first
+level-two heading and intentionally ignores the introductory content before it.
 
 The `react.dev` submodule provides the documentation source. From the `api/` working directory,
 `REACT_DEV_ROOT=../react.dev/src/content` selects its content directory. The API derives the
