@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   citationFromHref,
+  cleanSourceExcerpt,
   linkSourceCitations,
   parseSandpackFiles,
   sourceCitationHref,
@@ -10,6 +11,14 @@ import {
 } from './markdown';
 
 describe('React docs Sandpack parsing', () => {
+  it('removes React docs heading anchors from source excerpts', () => {
+    expect(
+      cleanSourceExcerpt(
+        '## You might not need an Effect {/*you-might-not-need-an-effect*/}\n\n**Prefer events.**',
+      ),
+    ).toBe('## You might not need an Effect\n\n**Prefer events.**');
+  });
+
   it('maps React docs filenames and adds the stylesheet import', () => {
     const files = parseSandpackFiles(`
 \`\`\`js src/App.js

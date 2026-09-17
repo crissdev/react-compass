@@ -1,5 +1,4 @@
 import asyncio
-import re
 from collections.abc import Sequence
 from functools import lru_cache
 from typing import Any
@@ -58,10 +57,6 @@ SCOPE_NOTICE = (
 )
 
 
-def _compact(text: str) -> str:
-    return re.sub(r"\s+", " ", text).strip()
-
-
 def _source_type(value: Any) -> str:
     normalized = str(value or "unknown").lower()
     return normalized if normalized in {"reference", "learn", "blog", "github"} else "unknown"
@@ -87,7 +82,7 @@ def format_sources(documents: Sequence[Document]) -> list[SourceExcerpt]:
             continue
         seen.add(key)
 
-        excerpt = _compact(document.page_content)
+        excerpt = document.page_content.strip()
         if len(excerpt) > 420:
             excerpt = excerpt[:417].rstrip() + "..."
 

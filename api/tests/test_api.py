@@ -66,6 +66,19 @@ def test_format_sources_deduplicates_and_truncates() -> None:
     assert sources[0].source_url == "https://react.dev/reference/react/useState"
 
 
+def test_format_sources_preserves_markdown_structure() -> None:
+    document = Document(
+        page_content="## State updates\n\n**Use an updater** when state depends on previous state.",
+        metadata={"title": "useState"},
+    )
+
+    source = format_sources([document])[0]
+
+    assert source.excerpt == (
+        "## State updates\n\n**Use an updater** when state depends on previous state."
+    )
+
+
 def test_format_context_uses_bare_numeric_citation_markers() -> None:
     documents = [
         Document(page_content="First excerpt", metadata={"title": "First source"}),

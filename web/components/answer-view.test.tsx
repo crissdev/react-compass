@@ -44,4 +44,32 @@ describe('AnswerView citations', () => {
     expect(markup).toContain('React questions only');
     expect(markup).not.toContain('Documentation sources');
   });
+
+  it('renders source excerpt Markdown without nesting links inside the source card', () => {
+    const markup = renderToStaticMarkup(
+      <AnswerView
+        answer={{
+          kind: 'react_answer',
+          message: 'Use an event handler [1].',
+          sources: [
+            {
+              id: 'effects-guide',
+              citation: 1,
+              title: 'Synchronizing with Effects',
+              section: 'You might not need an Effect',
+              source_type: 'learn',
+              source_url: 'https://react.dev/learn/synchronizing-with-effects',
+              excerpt:
+                '## Prefer events {/*prefer-events*/}\n\n**Avoid unnecessary Effects.** Read the [guide](/learn/responding-to-events).',
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(markup).toContain('<h2>Prefer events</h2>');
+    expect(markup).toContain('<strong>Avoid unnecessary Effects.</strong>');
+    expect(markup).not.toContain('{/*prefer-events*/}');
+    expect(markup).not.toContain('href="/learn/responding-to-events"');
+  });
 });

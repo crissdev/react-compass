@@ -748,7 +748,7 @@ a {
   text-transform: uppercase;
 }
 
-.source-copy strong {
+.source-title {
   overflow: hidden;
   color: var(--ink);
   font-size: 13px;
@@ -773,6 +773,53 @@ a {
   line-height: 1.45;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
+}
+
+.source-excerpt > :first-child {
+  margin-top: 0;
+}
+
+.source-excerpt > :last-child {
+  margin-bottom: 0;
+}
+
+.source-excerpt > * + * {
+  margin-top: 4px;
+}
+
+.source-excerpt h1,
+.source-excerpt h2,
+.source-excerpt h3,
+.source-excerpt h4,
+.source-excerpt h5,
+.source-excerpt h6,
+.source-excerpt p,
+.source-excerpt ul,
+.source-excerpt ol,
+.source-excerpt blockquote,
+.source-excerpt pre {
+  margin-bottom: 0;
+  font: inherit;
+}
+
+.source-excerpt h1,
+.source-excerpt h2,
+.source-excerpt h3,
+.source-excerpt h4,
+.source-excerpt h5,
+.source-excerpt h6,
+.source-excerpt strong {
+  font-weight: 400;
+}
+
+.source-excerpt ul,
+.source-excerpt ol {
+  padding-left: 16px;
+}
+
+.source-excerpt code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.95em;
 }
 
 .source-card > svg {
@@ -992,7 +1039,7 @@ footer {
 }
 
 [data-theme='dark'] .suggestion-grid button span,
-[data-theme='dark'] .source-copy strong {
+[data-theme='dark'] .source-title {
   color: #f0f6fc;
 }
 

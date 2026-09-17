@@ -7,6 +7,7 @@ import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';
 import {
   citationFromHref,
+  cleanSourceExcerpt,
   linkSourceCitations,
   splitCitationSections,
   splitMarkdown,
@@ -117,12 +118,21 @@ export function AnswerView({ answer }: { answer: Answer }) {
                 key={`${source.id}-${source.source_url}`}
               >
                 <span className="source-number">{source.citation}</span>
-                <span className="source-copy">
+                <div className="source-copy">
                   <span className="source-type">{source.source_type}</span>
-                  <strong>{source.title}</strong>
+                  <strong className="source-title">{source.title}</strong>
                   {source.section && <span className="source-section">{source.section}</span>}
-                  <span className="source-excerpt">{source.excerpt}</span>
-                </span>
+                  <div className="source-excerpt">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        a: ({ children }) => <>{children}</>,
+                      }}
+                    >
+                      {cleanSourceExcerpt(source.excerpt)}
+                    </ReactMarkdown>
+                  </div>
+                </div>
                 <ExternalLink size={14} aria-hidden="true" />
               </a>
             ))}
