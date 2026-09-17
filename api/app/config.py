@@ -1,37 +1,23 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-API_ROOT = Path(__file__).resolve().parents[1]
-PROJECT_ROOT = API_ROOT.parent
-
-
-def project_path(path: Path) -> Path:
-    """Resolve configured relative paths from the repository root."""
-    return path if path.is_absolute() else (PROJECT_ROOT / path).resolve()
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=(API_ROOT / ".env", PROJECT_ROOT / ".env"),
+        env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
         validate_default=True,
     )
 
-    model_name: str = "gpt-5-nano"
-    chroma_path: Path = Path("data/embeddings")
+    model_name: str
+    chroma_path: Path
     chroma_collection: str = "react-docs"
-    react_dev_root: Path = Path("../gh/react.dev/src/content")
+    react_dev_root: Path
     retrieval_count: int = 5
-    allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
-
-    @field_validator("chroma_path", "react_dev_root")
-    @classmethod
-    def resolve_project_path(cls, value: Path) -> Path:
-        return project_path(value)
+    allowed_origins: str
 
     @property
     def cors_origins(self) -> list[str]:
