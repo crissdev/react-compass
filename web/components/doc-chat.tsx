@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { FormEvent, MouseEvent, useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowUp, BookOpen, CircleStop, Github, Sparkles } from 'lucide-react';
+import { ArrowUp, BookOpen, CircleStop, Github, Sparkles } from 'lucide-react';
 import { readAnswerStream } from '@/lib/answer-stream';
 import { normalizeQuestion, questionHref } from '@/lib/questions';
 import { addSearchHistoryItem, removeSearchHistoryItem } from '@/lib/search-history';
@@ -33,10 +33,9 @@ const suggestions = [
 
 type DocChatProps = {
   initialQuestion?: string;
-  showDashboardLink?: boolean;
 };
 
-export function DocChat({ initialQuestion = '', showDashboardLink = false }: DocChatProps) {
+export function DocChat({ initialQuestion = '' }: DocChatProps) {
   const normalizedInitialQuestion = normalizeQuestion(initialQuestion);
   const [question, setQuestion] = useState(normalizedInitialQuestion);
   const [answer, setAnswer] = useState<Answer | null>(null);
@@ -159,14 +158,7 @@ export function DocChat({ initialQuestion = '', showDashboardLink = false }: Doc
           <span className="brand-icon">R</span>
           <span>DocChat</span>
         </a>
-        <nav aria-label="Primary navigation">
-          {showDashboardLink && (
-            // A native anchor clears preserved route state when returning to the dashboard.
-            // eslint-disable-next-line @next/next/no-html-link-for-pages
-            <a href="/" aria-label="Back to dashboard">
-              <ArrowLeft size={16} /> <span>Dashboard</span>
-            </a>
-          )}
+        <nav aria-label="Source links">
           <a
             href="https://react.dev"
             target="_blank"
