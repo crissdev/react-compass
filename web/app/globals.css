@@ -674,6 +674,64 @@ a {
   color: #596970;
 }
 
+.answer-suggestions {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.answer-suggestions > p {
+  margin: 0 0 12px;
+  color: #87949a;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.answer-suggestion-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.answer-suggestion-list button {
+  min-height: 82px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: #42535b;
+  background: #f8fbfc;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+  transition: 150ms ease;
+}
+
+.answer-suggestion-list button:hover {
+  border-color: #afd8e2;
+  color: var(--navy);
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(36, 77, 92, 0.08);
+  transform: translateY(-1px);
+}
+
+.answer-suggestion-list button:focus-visible {
+  outline: 3px solid rgba(51, 185, 218, 0.28);
+  outline-offset: 2px;
+}
+
+.answer-suggestion-list svg {
+  flex: 0 0 auto;
+  color: var(--react);
+}
+
 .sources-panel {
   position: sticky;
   top: 20px;
@@ -1043,6 +1101,27 @@ footer {
   color: #f0f6fc;
 }
 
+[data-theme='dark'] .answer-suggestions {
+  border-color: #30363d;
+}
+
+[data-theme='dark'] .answer-suggestions > p {
+  color: #8b949e;
+}
+
+[data-theme='dark'] .answer-suggestion-list button {
+  border-color: #30363d;
+  color: #c2ccd4;
+  background: #161b22;
+}
+
+[data-theme='dark'] .answer-suggestion-list button:hover {
+  border-color: #2b8fab;
+  color: #f0f6fc;
+  background: #1c222b;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
+}
+
 [data-theme='dark'] .search-history-heading,
 [data-theme='dark'] .history-question small {
   color: #8b949e;
@@ -1293,6 +1372,10 @@ footer {
     grid-template-columns: 1fr;
   }
 
+  .answer-suggestion-list {
+    grid-template-columns: 1fr;
+  }
+
   .sources-panel {
     position: static;
   }
@@ -1360,6 +1443,10 @@ footer {
 
   .markdown-body {
     padding: 24px 20px 32px;
+  }
+
+  .answer-suggestion-list button {
+    min-height: auto;
   }
 }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { ExternalLink, FileText } from 'lucide-react';
+import { ArrowUpRight, ExternalLink, FileText } from 'lucide-react';
 import { Fragment } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
@@ -16,8 +16,14 @@ import {
 import type { Answer } from '@/lib/types';
 import { SandpackExample } from './sandpack-example';
 
-export function AnswerView({ answer }: { answer: Answer }) {
-  const hasSources = answer.sources.length > 0;
+type AnswerViewProps = {
+  answer: Answer;
+  onAskQuestion?: (question: string) => void;
+};
+
+export function AnswerView({ answer, onAskQuestion }: AnswerViewProps) {
+  const hasSources = answer.kind === 'react_answer' && answer.sources.length > 0;
+  const suggestions = answer.kind === 'no_match' ? (answer.suggestions ?? []) : [];
   const sourcesByCitation = new Map(answer.sources.map((source) => [source.citation, source]));
   const message = linkSourceCitations(
     unwrapProseFences(answer.message),
@@ -35,7 +41,13 @@ export function AnswerView({ answer }: { answer: Answer }) {
           <span className="answer-mark">R</span>
           <div>
             <p className="eyebrow">React Compass</p>
-            <h2>{hasSources ? 'Answer from the docs' : 'React questions only'}</h2>
+            <h2>
+              {answer.kind === 'no_match'
+                ? 'No direct answer found'
+                : answer.kind === 'scope_notice'
+                  ? 'React questions only'
+                  : 'Answer from the docs'}
+            </h2>
           </div>
         </div>
         <div className="markdown-body">
@@ -98,6 +110,23 @@ export function AnswerView({ answer }: { answer: Answer }) {
               <Fragment key={`section-${sectionIndex}`}>{content}</Fragment>
             );
           })}
+          {suggestions.length > 0 && (
+            <div className="answer-suggestions">
+              <p>Try asking instead</p>
+              <div className="answer-suggestion-list">
+                {suggestions.map((suggestion) => (
+                  <button
+                    type="button"
+                    key={suggestion}
+                    onClick={() => onAskQuestion?.(suggestion)}
+                  >
+                    <span>{suggestion}</span>
+                    <ArrowUpRight size={16} aria-hidden="true" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

@@ -8,11 +8,24 @@ class AskRequest(BaseModel):
 
 
 class GeneratedAnswer(BaseModel):
+    status: Literal["answered", "insufficient_context"] = Field(
+        description=(
+            "Whether the supplied documentation excerpts directly support an answer to the "
+            "question."
+        )
+    )
     message: str = Field(
         description=(
             "A grounded Markdown answer. Cite sources using only bare numeric markers such as "
             "[1] and [2], never labeled markers such as [SOURCE 1]."
         )
+    )
+    suggestions: list[str] = Field(
+        max_length=3,
+        description=(
+            "For insufficient context, two or three concise follow-up questions that can be "
+            "answered directly from the supplied excerpts. Empty when the question is answered."
+        ),
     )
 
 
@@ -31,9 +44,10 @@ class SourceExcerpt(BaseModel):
 
 
 class AnswerResponse(BaseModel):
-    kind: Literal["react_answer", "scope_notice"] = "react_answer"
+    kind: Literal["react_answer", "no_match", "scope_notice"] = "react_answer"
     message: str
     sources: list[SourceExcerpt]
+    suggestions: list[str] = Field(default_factory=list, max_length=3)
 
 
 class QuestionGateResponse(BaseModel):

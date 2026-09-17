@@ -9,9 +9,10 @@ export type SourceExcerpt = {
 };
 
 export type Answer = {
-  kind: 'react_answer' | 'scope_notice';
+  kind: 'react_answer' | 'no_match' | 'scope_notice';
   message: string;
   sources: SourceExcerpt[];
+  suggestions?: string[];
 };
 
 export type StreamEvent =

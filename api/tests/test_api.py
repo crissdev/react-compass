@@ -5,8 +5,19 @@ from fastapi.testclient import TestClient
 from langchain_core.documents import Document
 
 from app.main import app
-from app.models import AnswerResponse, QuestionClassification, SourceExcerpt
-from app.service import format_context, format_sources, get_search_service, scope_notice_response
+from app.models import (
+    AnswerResponse,
+    GeneratedAnswer,
+    QuestionClassification,
+    SourceExcerpt,
+)
+from app.service import (
+    format_answer_response,
+    format_context,
+    format_sources,
+    get_search_service,
+    scope_notice_response,
+)
 
 
 class FakeSearchService:
@@ -128,6 +139,53 @@ def test_format_context_uses_bare_numeric_citation_markers() -> None:
     assert "[SOURCE" not in context
 
 
+def test_insufficient_context_hides_sources_and_returns_unique_suggestions() -> None:
+    documents = [
+        Document(
+            page_content="## State structure\n\nAvoid redundant state.",
+            metadata={"title": "Choosing the State Structure"},
+        )
+    ]
+    generated = GeneratedAnswer(
+        status="insufficient_context",
+        message="The retrieved documentation does not define stateless components.",
+        suggestions=[
+            " How should I structure state in React? ",
+            "How should I structure state in React?",
+            "When should I avoid redundant state?",
+        ],
+    )
+
+    response = format_answer_response(generated, documents)
+
+    assert response.kind == "no_match"
+    assert response.sources == []
+    assert response.suggestions == [
+        "How should I structure state in React?",
+        "When should I avoid redundant state?",
+    ]
+
+
+def test_answered_response_keeps_sources_and_discards_suggestions() -> None:
+    documents = [
+        Document(
+            page_content="## State updates\n\nState updates trigger a render.",
+            metadata={"title": "State", "source_url": "https://react.dev/learn/state"},
+        )
+    ]
+    generated = GeneratedAnswer(
+        status="answered",
+        message="State updates trigger a render [1].",
+        suggestions=["This suggestion should not be returned."],
+    )
+
+    response = format_answer_response(generated, documents)
+
+    assert response.kind == "react_answer"
+    assert len(response.sources) == 1
+    assert response.suggestions == []
+
+
 def test_stream_returns_status_and_result_events() -> None:
     app.dependency_overrides[get_search_service] = lambda: FakeSearchService()
     client = TestClient(app)
@@ -167,6 +225,7 @@ def test_classification_gate_returns_scope_notice_only_when_rejected(
     if has_response:
         assert payload["response"]["kind"] == "scope_notice"
         assert payload["response"]["sources"] == []
+        assert payload["response"]["suggestions"] == []
 
 
 @pytest.mark.parametrize("category", ["unrelated", "prompt_injection"])
@@ -191,6 +250,7 @@ def test_stream_rejects_non_react_questions_before_retrieval(category: str) -> N
             "from the React reference and learning guides."
         ),
         "sources": [],
+        "suggestions": [],
     }
     assert service.retrieve_calls == 0
     assert service.answer_calls == 0

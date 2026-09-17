@@ -261,11 +261,13 @@ export function DocChat({ initialQuestion = '' }: DocChatProps) {
         )}
       </section>
 
-      {answer && <AnswerView answer={answer} />}
+      {answer && <AnswerView answer={answer} onAskQuestion={navigateToQuestion} />}
 
       <footer>
         {answer?.kind === 'scope_notice'
           ? 'React Compass answers questions about React and its official documentation.'
+          : answer?.kind === 'no_match'
+            ? 'Suggested questions are grounded in nearby React documentation.'
           : 'Answers are generated from retrieved documentation. Check the cited source for details.'}
       </footer>
     </main>

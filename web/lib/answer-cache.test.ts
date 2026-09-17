@@ -37,4 +37,18 @@ describe('getCachedAnswer', () => {
     );
     expect(mocks.cacheLife).toHaveBeenCalledWith({ stale: 0, revalidate: 0, expire: 1 });
   });
+
+  it('caches no-match suggestions like other generated React answers', async () => {
+    const answer = {
+      kind: 'no_match' as const,
+      message: 'No direct answer found.',
+      sources: [],
+      suggestions: ['How should I structure state in React?'],
+    };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json(answer)));
+
+    await expect(getCachedAnswer('What are stateless components?')).resolves.toEqual(answer);
+
+    expect(mocks.cacheLife).toHaveBeenCalledWith('weeks');
+  });
 });

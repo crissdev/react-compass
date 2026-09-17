@@ -45,6 +45,38 @@ describe('AnswerView citations', () => {
     expect(markup).not.toContain('Documentation sources');
   });
 
+  it('renders suggested questions without retrieved sources for a no-match answer', () => {
+    const markup = renderToStaticMarkup(
+      <AnswerView
+        answer={{
+          kind: 'no_match',
+          message: 'The React docs do not directly define stateless components.',
+          suggestions: [
+            'How should I structure state in React?',
+            'When should I avoid redundant state?',
+          ],
+          sources: [
+            {
+              id: 'nearby-source',
+              citation: 1,
+              title: 'Choosing the State Structure',
+              section: 'Avoid redundant state',
+              source_type: 'learn',
+              source_url: 'https://react.dev/learn/choosing-the-state-structure',
+              excerpt: 'Avoid redundant state.',
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(markup).toContain('No direct answer found');
+    expect(markup).toContain('Try asking instead');
+    expect(markup).toContain('How should I structure state in React?');
+    expect(markup).toContain('When should I avoid redundant state?');
+    expect(markup).not.toContain('Documentation sources');
+  });
+
   it('renders source excerpt Markdown without nesting links inside the source card', () => {
     const markup = renderToStaticMarkup(
       <AnswerView
