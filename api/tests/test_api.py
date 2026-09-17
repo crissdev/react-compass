@@ -148,17 +148,18 @@ def test_insufficient_context_hides_sources_and_returns_unique_suggestions() -> 
     ]
     generated = GeneratedAnswer(
         status="insufficient_context",
-        message="The retrieved documentation does not define stateless components.",
+        message="The supplied excerpts do not define stateless components.",
         suggestions=[
-            " How should I structure state in React? ",
+            " How should I structure state in React? [1] ",
             "How should I structure state in React?",
-            "When should I avoid redundant state?",
+            "When should I avoid [SOURCE 2] redundant state?",
         ],
     )
 
     response = format_answer_response(generated, documents)
 
     assert response.kind == "no_match"
+    assert response.message == "The React docs don't directly cover this question."
     assert response.sources == []
     assert response.suggestions == [
         "How should I structure state in React?",

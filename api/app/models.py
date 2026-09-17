@@ -10,8 +10,7 @@ class AskRequest(BaseModel):
 class GeneratedAnswer(BaseModel):
     status: Literal["answered", "insufficient_context"] = Field(
         description=(
-            "Whether the supplied documentation excerpts directly support an answer to the "
-            "question."
+            "Whether the supplied React documentation directly supports an answer to the question."
         )
     )
     message: str = Field(
@@ -24,7 +23,8 @@ class GeneratedAnswer(BaseModel):
         max_length=3,
         description=(
             "For insufficient context, two or three concise follow-up questions that can be "
-            "answered directly from the supplied excerpts. Empty when the question is answered."
+            "answered directly from the supplied React documentation. Empty when the question "
+            "is answered."
         ),
     )
 
