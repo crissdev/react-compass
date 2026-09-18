@@ -143,6 +143,19 @@ a {
   background: rgba(255, 255, 255, 0.8);
 }
 
+.github-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  background: currentColor;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+}
+
 .hero {
   width: min(900px, calc(100% - 40px));
   margin: 0 auto;

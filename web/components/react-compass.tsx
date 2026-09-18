@@ -1,14 +1,16 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { FormEvent, MouseEvent, useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowUp, BookOpen, CircleStop, Github, Sparkles } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { MouseEvent, SubmitEvent } from 'react';
+import { ArrowUp, BookOpen, CircleStop, Sparkles } from 'lucide-react';
 import { readAnswerStream } from '@/lib/answer-stream';
 import { normalizeQuestion, questionHref } from '@/lib/questions';
 import { addSearchHistoryItem, removeSearchHistoryItem } from '@/lib/search-history';
 import { saveSearchHistory, useSearchHistory } from '@/lib/search-history-store';
 import type { Answer } from '@/lib/types';
 import { AnswerView } from './answer-view';
+import githubIcon from './icons/github.svg';
 import { SearchHistory } from './search-history';
 import { ThemeToggle } from './theme-toggle';
 
@@ -114,7 +116,7 @@ export function ReactCompass({ initialQuestion = '' }: ReactCompassProps) {
     router.push(questionHref(value));
   }
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     navigateToQuestion();
   }
@@ -173,7 +175,15 @@ export function ReactCompass({ initialQuestion = '' }: ReactCompassProps) {
             rel="noreferrer"
             aria-label="Open React GitHub repository"
           >
-            <Github size={16} /> <span>GitHub</span>
+            <span
+              aria-hidden="true"
+              className="github-icon"
+              style={{
+                maskImage: `url(${githubIcon.src})`,
+                WebkitMaskImage: `url(${githubIcon.src})`,
+              }}
+            />
+            <span>GitHub</span>
           </a>
           <ThemeToggle />
         </nav>
