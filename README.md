@@ -7,6 +7,10 @@ A small React documentation assistant built as two local applications in one wor
 
 The answer pipeline classifies every uncached question for React relevance and prompt-injection attempts. React questions continue through retrieval and grounded answer generation; other inputs receive a fixed scope notice without running RAG. The UI streams progress events, renders highlighted code, and turns React docs-style `<Sandpack>` examples into editable previews. The browser keeps the 15 most recent questions. Next.js caches React answers for a week and immediately invalidates scope notices, so cache misses are classified exactly once by the API. Removing a history entry also invalidates its cached React answer.
 
+## How it works
+
+![React Compass architecture, from documentation ingestion through retrieval and answer rendering](docs/react-compass-architecture.png)
+
 ## Run locally
 
 1. Initialize the React documentation submodule:
