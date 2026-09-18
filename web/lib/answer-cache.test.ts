@@ -38,6 +38,20 @@ describe('getCachedAnswer', () => {
     expect(mocks.cacheLife).toHaveBeenCalledWith({ stale: 0, revalidate: 0, expire: 1 });
   });
 
+  it('retains grounded answers with the weekly cache profile', async () => {
+    const answer = {
+      kind: 'react_answer' as const,
+      message: 'State lets a component remember information.',
+      sources: [],
+    };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json(answer)));
+
+    await expect(getCachedAnswer('How does useState work?')).resolves.toEqual(answer);
+
+    expect(mocks.cacheLife).toHaveBeenCalledWith('weeks');
+    expect(mocks.cacheTag).toHaveBeenCalledTimes(1);
+  });
+
   it('does not retain no-match suggestions', async () => {
     const answer = {
       kind: 'no_match' as const,
