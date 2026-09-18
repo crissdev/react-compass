@@ -2574,7 +2574,7 @@ wheels = [
 ]
 
 [[package]]
-name = "react-docs-chat-api"
+name = "react-compass-api"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

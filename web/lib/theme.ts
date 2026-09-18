@@ -4,8 +4,8 @@ import { useSyncExternalStore } from 'react';
 
 export type Theme = 'light' | 'dark';
 
-const STORAGE_KEY = 'docchat-theme';
-const THEME_EVENT = 'docchat-theme-change';
+const STORAGE_KEY = 'react-compass-theme';
+const THEME_EVENT = 'react-compass-theme-change';
 
 function readTheme(): Theme {
   return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';

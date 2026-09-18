@@ -1,18 +1,18 @@
 import { Suspense } from 'react';
-import { DocChat } from '@/components/doc-chat';
+import { ReactCompass } from '@/components/react-compass';
 import { normalizeQuestion } from '@/lib/questions';
 
 type HomeProps = {
   searchParams: Promise<{ q?: string | string[] }>;
 };
 
-async function DocChatFromQuery({ searchParams }: HomeProps) {
+async function ReactCompassFromQuery({ searchParams }: HomeProps) {
   const query = await searchParams;
   const question = typeof query.q === 'string' ? normalizeQuestion(query.q) : '';
   const hasQuestion = question.length >= 2 && question.length <= 1_000;
 
   return (
-    <DocChat
+    <ReactCompass
       key={hasQuestion ? question : 'dashboard'}
       initialQuestion={hasQuestion ? question : ''}
     />
@@ -28,7 +28,7 @@ export default function Home({ searchParams }: HomeProps) {
         </main>
       }
     >
-      <DocChatFromQuery searchParams={searchParams} />
+      <ReactCompassFromQuery searchParams={searchParams} />
     </Suspense>
   );
 }

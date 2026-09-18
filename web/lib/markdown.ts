@@ -19,7 +19,7 @@ const STRAY_CITATION_FENCE_PATTERN = /^[ \t]*(?:`{3,}|~{3,})[ \t]+(?=\[\d+\](?:\
 const REACT_NOTE_PATTERN = /<Note>\s*([\s\S]*?)\s*<\/Note>/gi;
 const CODE_PATTERN = /(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`)/g;
 const CITATION_PATTERN = /([ \t]*)(?<!\\)\[(\d+)\](?!\s*[:(])/g;
-const SOURCE_CITATION_PREFIX = '#docchat-source-';
+const SOURCE_CITATION_PREFIX = '#react-compass-source-';
 const MARKDOWN_HEADING_PATTERN = /^[ \t]{0,3}(#{1,6})[ \t]+(.+?)[ \t]*#*[ \t]*$/gm;
 const REACT_DOCS_ANCHOR_PATTERN = /[ \t]*\{\/\*[a-z0-9_-]+\*\/\}/gi;
 const LEADING_MARKDOWN_HEADING_PATTERN =

@@ -1,5 +1,5 @@
 [project]
-name = "react-docs-chat-api"
+name = "react-compass-api"
 version = "0.1.0"
 description = "Grounded React documentation search API"
 requires-python = ">=3.12"

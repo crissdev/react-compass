@@ -52,14 +52,14 @@ h1 { color: teal; }
     const content = 'Read [1] and [4]. Keep `[1]` and ```js\nconst ref = "[1]";\n``` unchanged.';
 
     expect(linkSourceCitations(content, [1])).toBe(
-      'Read[1](#docchat-source-1) and [4]. Keep `[1]` and ```js\nconst ref = "[1]";\n``` unchanged.',
+      'Read[1](#react-compass-source-1) and [4]. Keep `[1]` and ```js\nconst ref = "[1]";\n``` unchanged.',
     );
   });
 
   it('recognizes only valid source citation links', () => {
-    expect(sourceCitationHref(3)).toBe('#docchat-source-3');
-    expect(citationFromHref('#docchat-source-3')).toBe(3);
-    expect(citationFromHref('#docchat-source-nope')).toBeNull();
+    expect(sourceCitationHref(3)).toBe('#react-compass-source-3');
+    expect(citationFromHref('#react-compass-source-3')).toBe(3);
+    expect(citationFromHref('#react-compass-source-nope')).toBeNull();
     expect(citationFromHref('https://react.dev')).toBeNull();
   });
 

@@ -31,11 +31,11 @@ const suggestions = [
   },
 ];
 
-type DocChatProps = {
+type ReactCompassProps = {
   initialQuestion?: string;
 };
 
-export function DocChat({ initialQuestion = '' }: DocChatProps) {
+export function ReactCompass({ initialQuestion = '' }: ReactCompassProps) {
   const normalizedInitialQuestion = normalizeQuestion(initialQuestion);
   const [question, setQuestion] = useState(normalizedInitialQuestion);
   const [answer, setAnswer] = useState<Answer | null>(null);

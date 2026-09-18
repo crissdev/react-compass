@@ -7,7 +7,7 @@ const API_BASE_URL = process.env.API_BASE_URL ?? 'http://127.0.0.1:8000';
 
 export function answerCacheTag(question: string): string {
   const digest = createHash('sha256').update(questionKey(question)).digest('hex');
-  return `docchat-answer:${digest}`;
+  return `react-compass-answer:${digest}`;
 }
 
 export async function getCachedAnswer(question: string): Promise<Answer> {

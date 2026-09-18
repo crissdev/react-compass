@@ -7,7 +7,7 @@ import {
   type SearchHistoryItem,
 } from '@/lib/search-history';
 
-const HISTORY_EVENT = 'docchat-search-history-change';
+const HISTORY_EVENT = 'react-compass-search-history-change';
 const EMPTY_HISTORY: SearchHistoryItem[] = [];
 
 let cachedValue: string | null | undefined;

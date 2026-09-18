@@ -6,7 +6,7 @@ export type SearchHistoryItem = {
 };
 
 export const SEARCH_HISTORY_LIMIT = 15;
-export const SEARCH_HISTORY_STORAGE_KEY = 'docchat-search-history';
+export const SEARCH_HISTORY_STORAGE_KEY = 'react-compass-search-history';
 
 function isSearchHistoryItem(value: unknown): value is SearchHistoryItem {
   if (!value || typeof value !== 'object') return false;

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import 'highlight.js/styles/github.css';
 import './globals.css';
 
-const themeScript = `(function(){try{var t=localStorage.getItem('docchat-theme');var d=t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.setAttribute('data-theme',d?'dark':'light')}catch(e){}})()`;
+const themeScript = `(function(){try{var t=localStorage.getItem('react-compass-theme');var d=t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.setAttribute('data-theme',d?'dark':'light')}catch(e){}})()`;
 
 export const metadata: Metadata = {
   title: 'React Compass',
