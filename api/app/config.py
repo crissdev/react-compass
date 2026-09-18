@@ -1,6 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,13 +13,28 @@ class Settings(BaseSettings):
         validate_default=True,
     )
 
-    model_name: str
-    embedding_model: str
-    chroma_path: Path
+    model_name: str = "gpt-5-nano"
+    embedding_model: str = "text-embedding-3-small"
+    chroma_path: Path | None = Path("../data/embeddings")
     chroma_collection: str = "react-docs"
-    react_dev_root: Path
+    chroma_api_key: SecretStr | None = None
+    chroma_tenant: str | None = None
+    chroma_database: str = "react-docs"
+    react_dev_root: Path = Path("../react.dev/src/content")
     retrieval_count: int = 5
-    allowed_origins: str
+    allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+
+    @model_validator(mode="after")
+    def validate_chroma_configuration(self) -> "Settings":
+        if self.chroma_api_key and not self.chroma_tenant:
+            raise ValueError("CHROMA_TENANT is required when CHROMA_API_KEY is configured")
+        if not self.chroma_api_key and not self.chroma_path:
+            raise ValueError("CHROMA_PATH is required when Chroma Cloud is not configured")
+        return self
+
+    @property
+    def uses_chroma_cloud(self) -> bool:
+        return self.chroma_api_key is not None
 
     @property
     def cors_origins(self) -> list[str]:

@@ -1,9 +1,9 @@
 # React Compass
 
-A small React documentation assistant built as two local applications in one workspace:
+A small React documentation assistant built as two applications in one workspace:
 
 - `web/` — Next.js UI and backend-for-frontend proxy
-- `api/` — FastAPI, LangChain, and the existing Chroma collection
+- `api/` — FastAPI, LangChain, and Chroma (local or Chroma Cloud)
 
 The answer pipeline classifies every uncached question for React relevance and prompt-injection attempts. React questions continue through retrieval and grounded answer generation; other inputs receive a fixed scope notice without running RAG. The UI streams progress events, renders highlighted code, and turns React docs-style `<Sandpack>` examples into editable previews. The browser keeps the 15 most recent questions. Next.js caches React answers for a week and immediately invalidates scope notices, so cache misses are classified exactly once by the API. Removing a history entry also invalidates its cached React answer.
 
@@ -56,6 +56,10 @@ Git-ignored because it contains generated vector data. From the `api/` working d
 `CHROMA_PATH=../data/embeddings` selects it. Ingestion indexes sections beginning at the first
 level-two heading and intentionally ignores the introductory content before it.
 
+For production, configure `CHROMA_API_KEY`, `CHROMA_TENANT`, and `CHROMA_DATABASE`. The API then
+uses Chroma Cloud instead of `CHROMA_PATH`; the collection name remains `react-docs` unless
+`CHROMA_COLLECTION` is overridden.
+
 The `react.dev` submodule provides the documentation source. From the `api/` working directory,
 `REACT_DEV_ROOT=../react.dev/src/content` selects its content directory. The API derives the
 `reference`, `learn`, and `blog` source paths from that root.
@@ -66,6 +70,20 @@ Re-index the reference, learn, and blog Markdown with:
 cd api
 uv run python -m app.ingest
 ```
+
+## Deploy to Vercel
+
+The root `vercel.json` deploys `web/` and `api/` as Vercel Services. The Next.js service is public;
+FastAPI stays private and is reached through the `API_BASE_URL` service binding.
+
+Set the Vercel project's framework preset to **Services**, then configure these production secrets:
+
+- `OPENAI_API_KEY`
+- `CHROMA_API_KEY`
+- `CHROMA_TENANT`
+
+`CHROMA_DATABASE` defaults to `react-docs`. LangSmith remains optional; configure
+`LANGSMITH_API_KEY`, `LANGSMITH_PROJECT`, and `LANGSMITH_TRACING=true` to enable tracing.
 
 ## Checks
 

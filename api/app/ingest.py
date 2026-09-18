@@ -1,10 +1,9 @@
 from pathlib import Path
 
-from langchain_chroma import Chroma
 from langchain_core.documents import Document
-from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 
+from app.chroma_store import create_chroma_store
 from app.config import get_settings
 
 
@@ -63,11 +62,7 @@ def documents_for_file(source_type: str, root: Path, file: Path) -> list[Documen
 
 def main() -> None:
     settings = get_settings()
-    store = Chroma(
-        persist_directory=str(settings.chroma_path),
-        collection_name=settings.chroma_collection,
-        embedding_function=OpenAIEmbeddings(model=settings.embedding_model),
-    )
+    store = create_chroma_store(settings)
     roots = {
         "reference": settings.react_docs_reference_path,
         "learn": settings.react_docs_learn_path,
@@ -83,7 +78,12 @@ def main() -> None:
         raise RuntimeError("No React documentation Markdown files were found")
 
     store.add_documents(documents)
-    print(f"Indexed {len(documents)} documentation chunks in {settings.chroma_path}")
+    destination = (
+        f"Chroma Cloud database {settings.chroma_database}"
+        if settings.uses_chroma_cloud
+        else str(settings.chroma_path)
+    )
+    print(f"Indexed {len(documents)} documentation chunks in {destination}")
 
 
 if __name__ == "__main__":
