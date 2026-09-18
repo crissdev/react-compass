@@ -54,6 +54,31 @@ describe('POST /api/ask', () => {
       },
       { type: 'result', data: answer },
     ]);
+    expect(mocks.revalidateTag).not.toHaveBeenCalled();
+  });
+
+  it('invalidates no-match results immediately', async () => {
+    const answer = {
+      kind: 'no_match' as const,
+      message: 'No direct answer found.',
+      sources: [],
+      suggestions: ['How should I structure state in React?'],
+    };
+    mocks.getCachedAnswer.mockResolvedValue(answer);
+
+    const response = await POST(
+      new Request('http://localhost/api/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: 'What are stateless components?' }),
+      }),
+    );
+    await response.text();
+
+    expect(mocks.revalidateTag).toHaveBeenCalledWith(
+      'answer:What are stateless components?',
+      { expire: 0 },
+    );
   });
 
   it('replaces a long-running cache status while a fresh answer is prepared', async () => {

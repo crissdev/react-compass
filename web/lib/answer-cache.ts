@@ -28,7 +28,7 @@ export async function getCachedAnswer(question: string): Promise<Answer> {
   }
 
   const answer = (await response.json()) as Answer;
-  if (answer.kind !== 'scope_notice') {
+  if (answer.kind === 'react_answer') {
     cacheLife('weeks');
   } else {
     cacheLife({ stale: 0, revalidate: 0, expire: 1 });
