@@ -247,5 +247,5 @@ class ReactDocsSearchService:
 def get_search_service() -> ReactDocsSearchService:
     settings: Settings = get_settings()
     store = create_chroma_store(settings)
-    model = init_chat_model(settings.model_name)
+    model = init_chat_model(settings.model_name, **settings.model_args)
     return ReactDocsSearchService(model, store, settings.retrieval_count)

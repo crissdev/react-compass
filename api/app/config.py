@@ -1,7 +1,8 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
-from pydantic import SecretStr, model_validator
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -9,11 +10,13 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
+        env_nested_delimiter="__",
         extra="ignore",
         validate_default=True,
     )
 
     model_name: str = "gpt-5-nano"
+    model_args: dict[str, Any] = Field(default_factory=dict)
     embedding_model: str = "text-embedding-3-small"
     chroma_path: Path | None = Path("../data/embeddings")
     chroma_collection: str = "react-docs"

@@ -6,6 +6,20 @@ from pydantic import ValidationError
 from app.config import Settings
 
 
+def test_model_args_support_nested_environment_properties(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MODEL_ARGS__USE_RESPONSES_API", "true")
+    monkeypatch.setenv("MODEL_ARGS__TEMPERATURE", "0.2")
+    monkeypatch.setenv("MODEL_ARGS__REASONING__EFFORT", "medium")
+
+    settings = Settings(_env_file=None)
+
+    assert settings.model_args == {
+        "use_responses_api": "true",
+        "temperature": "0.2",
+        "reasoning": {"effort": "medium"},
+    }
+
+
 def test_configured_paths_are_used_without_repository_layout_assumptions() -> None:
     settings = Settings(
         _env_file=None,
