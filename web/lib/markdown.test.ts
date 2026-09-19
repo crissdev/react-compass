@@ -44,12 +44,19 @@ h1 { color: teal; }
   });
 
   it('keeps prose around an interactive example', () => {
-    const parts = splitMarkdown('Before\n<Sandpack>\n```js\nexport default () => null\n```\n</Sandpack>\nAfter');
-    expect(parts.map((part) => part.type)).toEqual(['markdown', 'sandpack', 'markdown']);
+    const parts = splitMarkdown(
+      'Before\n<Sandpack>\n```js\nexport default () => null\n```\n</Sandpack>\nAfter',
+    );
+    expect(parts.map((part) => part.type)).toEqual([
+      'markdown',
+      'sandpack',
+      'markdown',
+    ]);
   });
 
   it('links known source citations without changing code examples or unknown citations', () => {
-    const content = 'Read [1] and [4]. Keep `[1]` and ```js\nconst ref = "[1]";\n``` unchanged.';
+    const content =
+      'Read [1] and [4]. Keep `[1]` and ```js\nconst ref = "[1]";\n``` unchanged.';
 
     expect(linkSourceCitations(content, [1])).toBe(
       'Read[1](#react-compass-source-1) and [4]. Keep `[1]` and ```js\nconst ref = "[1]";\n``` unchanged.',
@@ -75,7 +82,8 @@ h1 { color: teal; }
   });
 
   it('turns a prose-only fenced list back into Markdown', () => {
-    const content = 'Before\n````\n- First explanation\n- Second explanation\n````\nAfter';
+    const content =
+      'Before\n````\n- First explanation\n- Second explanation\n````\nAfter';
 
     expect(unwrapProseFences(content)).toBe(
       'Before\n\n- First explanation\n- Second explanation\n\nAfter',
@@ -122,8 +130,10 @@ h1 { color: teal; }
     expect(unwrapProseFences('```text\n- a command argument\n```')).toBe(
       '```text\n- a command argument\n```',
     );
-    expect(unwrapProseFences('```diff\n- removed first line\n- removed second line\n```')).toBe(
-      '```diff\n- removed first line\n- removed second line\n```',
-    );
+    expect(
+      unwrapProseFences(
+        '```diff\n- removed first line\n- removed second line\n```',
+      ),
+    ).toBe('```diff\n- removed first line\n- removed second line\n```');
   });
 });

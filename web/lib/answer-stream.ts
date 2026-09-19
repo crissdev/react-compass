@@ -30,7 +30,8 @@ export async function readAnswerStream(
   try {
     while (true) {
       const { done, value } = await reader.read();
-      if (signal?.aborted) throw new DOMException('Search cancelled', 'AbortError');
+      if (signal?.aborted)
+        throw new DOMException('Search cancelled', 'AbortError');
       buffer += decoder.decode(value, { stream: !done });
       const decoded = decodeEventLines(buffer);
       buffer = decoded.remainder;

@@ -30,7 +30,10 @@ export function SearchHistory({
   if (items.length === 0) return null;
 
   return (
-    <section className="search-history" aria-labelledby="search-history-heading">
+    <section
+      className="search-history"
+      aria-labelledby="search-history-heading"
+    >
       <div className="search-history-heading">
         <div>
           <HistoryIcon size={15} aria-hidden="true" />

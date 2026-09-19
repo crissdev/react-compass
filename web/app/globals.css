@@ -30,7 +30,13 @@ body {
   color: var(--ink);
   background: #fbfdfd;
   font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
 }
 
 html {
@@ -78,7 +84,11 @@ a {
   height: 620px;
   top: -360px;
   left: calc(50% - 550px);
-  background: radial-gradient(circle, rgba(88, 196, 220, 0.22), transparent 68%);
+  background: radial-gradient(
+    circle,
+    rgba(88, 196, 220, 0.22),
+    transparent 68%
+  );
 }
 
 .ambient-two {
@@ -86,7 +96,11 @@ a {
   height: 700px;
   top: -420px;
   right: calc(50% - 640px);
-  background: radial-gradient(circle, rgba(201, 245, 222, 0.3), transparent 70%);
+  background: radial-gradient(
+    circle,
+    rgba(201, 245, 222, 0.3),
+    transparent 70%
+  );
 }
 
 .topbar {
@@ -215,12 +229,16 @@ a {
   border: 1px solid #d7e2e6;
   border-radius: 24px;
   background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 16px 50px rgba(25, 69, 83, 0.11), 0 2px 6px rgba(25, 69, 83, 0.05);
+  box-shadow:
+    0 16px 50px rgba(25, 69, 83, 0.11),
+    0 2px 6px rgba(25, 69, 83, 0.05);
 }
 
 .search-form:focus-within {
   border-color: #95cedd;
-  box-shadow: 0 18px 55px rgba(25, 105, 128, 0.15), 0 0 0 4px rgba(88, 196, 220, 0.12);
+  box-shadow:
+    0 18px 55px rgba(25, 105, 128, 0.15),
+    0 0 0 4px rgba(88, 196, 220, 0.12);
 }
 
 .search-form input {
@@ -304,8 +322,12 @@ a {
 }
 
 @keyframes searching {
-  0% { transform: translateX(-110%); }
-  100% { transform: translateX(200%); }
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
 }
 
 .error-message {
@@ -1006,7 +1028,11 @@ footer {
 }
 
 [data-theme='dark'] .ambient-one {
-  background: radial-gradient(circle, rgba(88, 196, 220, 0.15), transparent 68%);
+  background: radial-gradient(
+    circle,
+    rgba(88, 196, 220, 0.15),
+    transparent 68%
+  );
 }
 
 [data-theme='dark'] .ambient-two {
@@ -1053,12 +1079,16 @@ footer {
 [data-theme='dark'] .search-form {
   border-color: #30363d;
   background: rgba(22, 27, 34, 0.96);
-  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.28), 0 2px 6px rgba(0, 0, 0, 0.22);
+  box-shadow:
+    0 16px 50px rgba(0, 0, 0, 0.28),
+    0 2px 6px rgba(0, 0, 0, 0.22);
 }
 
 [data-theme='dark'] .search-form:focus-within {
   border-color: #2b8fab;
-  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.32), 0 0 0 4px rgba(88, 196, 220, 0.15);
+  box-shadow:
+    0 18px 55px rgba(0, 0, 0, 0.32),
+    0 0 0 4px rgba(88, 196, 220, 0.15);
 }
 
 [data-theme='dark'] .search-form input {

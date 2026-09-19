@@ -67,7 +67,9 @@ const Sandpack = dynamic(
   () => import('@codesandbox/sandpack-react').then((module) => module.Sandpack),
   {
     ssr: false,
-    loading: () => <div className="sandpack-loading">Preparing interactive example…</div>,
+    loading: () => (
+      <div className="sandpack-loading">Preparing interactive example…</div>
+    ),
   },
 );
 

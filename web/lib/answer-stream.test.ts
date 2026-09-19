@@ -18,13 +18,19 @@ it('cancels a reader that is waiting for the next streamed event', async () => {
     new ReadableStream({
       start(stream) {
         stream.enqueue(
-          encoder.encode('{"type":"status","stage":"retrieving","message":"Searching"}\n'),
+          encoder.encode(
+            '{"type":"status","stage":"retrieving","message":"Searching"}\n',
+          ),
         );
       },
     }),
   );
 
-  const reading = readAnswerStream(response, () => undefined, controller.signal);
+  const reading = readAnswerStream(
+    response,
+    () => undefined,
+    controller.signal,
+  );
   await Promise.resolve();
   controller.abort();
 

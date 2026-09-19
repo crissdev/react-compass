@@ -24,7 +24,9 @@ describe('getCachedAnswer', () => {
     const fetchMock = vi.fn().mockResolvedValue(Response.json(answer));
     vi.stubGlobal('fetch', fetchMock);
 
-    await expect(getCachedAnswer('  What is the capital of France?  ')).resolves.toEqual(answer);
+    await expect(
+      getCachedAnswer('  What is the capital of France?  '),
+    ).resolves.toEqual(answer);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
@@ -35,7 +37,11 @@ describe('getCachedAnswer', () => {
         method: 'POST',
       }),
     );
-    expect(mocks.cacheLife).toHaveBeenCalledWith({ stale: 0, revalidate: 0, expire: 1 });
+    expect(mocks.cacheLife).toHaveBeenCalledWith({
+      stale: 0,
+      revalidate: 0,
+      expire: 1,
+    });
   });
 
   it('retains grounded answers with the weekly cache profile', async () => {
@@ -46,7 +52,9 @@ describe('getCachedAnswer', () => {
     };
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json(answer)));
 
-    await expect(getCachedAnswer('How does useState work?')).resolves.toEqual(answer);
+    await expect(getCachedAnswer('How does useState work?')).resolves.toEqual(
+      answer,
+    );
 
     expect(mocks.cacheLife).toHaveBeenCalledWith('weeks');
     expect(mocks.cacheTag).toHaveBeenCalledTimes(1);
@@ -61,8 +69,14 @@ describe('getCachedAnswer', () => {
     };
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json(answer)));
 
-    await expect(getCachedAnswer('What are stateless components?')).resolves.toEqual(answer);
+    await expect(
+      getCachedAnswer('What are stateless components?'),
+    ).resolves.toEqual(answer);
 
-    expect(mocks.cacheLife).toHaveBeenCalledWith({ stale: 0, revalidate: 0, expire: 1 });
+    expect(mocks.cacheLife).toHaveBeenCalledWith({
+      stale: 0,
+      revalidate: 0,
+      expire: 1,
+    });
   });
 });

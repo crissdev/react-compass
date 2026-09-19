@@ -8,7 +8,8 @@ type HomeProps = {
 
 async function ReactCompassFromQuery({ searchParams }: HomeProps) {
   const query = await searchParams;
-  const question = typeof query.q === 'string' ? normalizeQuestion(query.q) : '';
+  const question =
+    typeof query.q === 'string' ? normalizeQuestion(query.q) : '';
   const hasQuestion = question.length >= 2 && question.length <= 1_000;
 
   return (

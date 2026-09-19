@@ -66,7 +66,8 @@ export async function POST(request: Request) {
         if (answer.kind !== 'react_answer') {
           revalidateTag(answerCacheTag(question), { expire: 0 });
         }
-        if (!cancelled) controller.enqueue(encodeEvent({ type: 'result', data: answer }));
+        if (!cancelled)
+          controller.enqueue(encodeEvent({ type: 'result', data: answer }));
       } catch {
         if (!cancelled) {
           controller.enqueue(

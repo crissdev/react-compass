@@ -15,21 +15,27 @@ const PROSE_FENCE_PATTERN =
   /^[ \t]{0,3}(`{3,}|~{3,})[ \t]*(?:text|markdown|md)?[ \t]*\r?\n([\s\S]*?)^[ \t]{0,3}\1[ \t]*$/gim;
 const UNTERMINATED_PROSE_FENCE_PATTERN =
   /^[ \t]{0,3}(?:`{3,}|~{3,})[ \t]*(?:text|markdown|md)?[ \t]*\r?\n([\s\S]*?)(?=\r?\n<Sandpack(?:\s|>))/gim;
-const STRAY_CITATION_FENCE_PATTERN = /^[ \t]*(?:`{3,}|~{3,})[ \t]+(?=\[\d+\](?:\s|$))/gm;
+const STRAY_CITATION_FENCE_PATTERN =
+  /^[ \t]*(?:`{3,}|~{3,})[ \t]+(?=\[\d+\](?:\s|$))/gm;
 const REACT_NOTE_PATTERN = /<Note>\s*([\s\S]*?)\s*<\/Note>/gi;
 const CODE_PATTERN = /(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`)/g;
 const CITATION_PATTERN = /([ \t]*)(?<!\\)\[(\d+)\](?!\s*[:(])/g;
 const SOURCE_CITATION_PREFIX = '#react-compass-source-';
-const MARKDOWN_HEADING_PATTERN = /^[ \t]{0,3}(#{1,6})[ \t]+(.+?)[ \t]*#*[ \t]*$/gm;
+const MARKDOWN_HEADING_PATTERN =
+  /^[ \t]{0,3}(#{1,6})[ \t]+(.+?)[ \t]*#*[ \t]*$/gm;
 const REACT_DOCS_ANCHOR_PATTERN = /[ \t]*\{\/\*[a-z0-9_-]+\*\/\}/gi;
 const LEADING_MARKDOWN_HEADING_PATTERN =
   /^[ \t]{0,3}#{1,6}[ \t]+(.+?)[ \t]*#*[ \t]*(?:\r?\n|$)/;
 
-export function cleanSourceExcerpt(content: string, section?: string | null): string {
+export function cleanSourceExcerpt(
+  content: string,
+  section?: string | null,
+): string {
   const cleaned = content.replace(REACT_DOCS_ANCHOR_PATTERN, '');
   const heading = cleaned.match(LEADING_MARKDOWN_HEADING_PATTERN);
 
-  if (!section || !heading || heading[1].trim() !== section.trim()) return cleaned;
+  if (!section || !heading || heading[1].trim() !== section.trim())
+    return cleaned;
 
   return cleaned.slice(heading[0].length).replace(/^\r?\n/, '');
 }
@@ -45,7 +51,10 @@ export function citationFromHref(href: string | undefined): number | null {
   return Number.isInteger(value) && value > 0 ? value : null;
 }
 
-export function linkSourceCitations(content: string, citations: readonly number[]): string {
+export function linkSourceCitations(
+  content: string,
+  citations: readonly number[],
+): string {
   const availableCitations = new Set(citations);
 
   return content
@@ -53,12 +62,15 @@ export function linkSourceCitations(content: string, citations: readonly number[
     .map((segment, index) => {
       if (index % 2 === 1) return segment;
 
-      return segment.replace(CITATION_PATTERN, (match, _leadingSpace: string, value: string) => {
-        const citation = Number(value);
-        return availableCitations.has(citation)
-          ? `[${citation}](${sourceCitationHref(citation)})`
-          : match;
-      });
+      return segment.replace(
+        CITATION_PATTERN,
+        (match, _leadingSpace: string, value: string) => {
+          const citation = Number(value);
+          return availableCitations.has(citation)
+            ? `[${citation}](${sourceCitationHref(citation)})`
+            : match;
+        },
+      );
     })
     .join('');
 }
@@ -81,9 +93,15 @@ export function splitCitationSections(content: string): MarkdownSection[] {
   const sections: MarkdownSection[] = [];
 
   if (citationStart > 0) {
-    sections.push({ type: 'content', content: content.slice(0, citationStart) });
+    sections.push({
+      type: 'content',
+      content: content.slice(0, citationStart),
+    });
   }
-  sections.push({ type: 'citations', content: content.slice(citationStart, citationEnd) });
+  sections.push({
+    type: 'citations',
+    content: content.slice(citationStart, citationEnd),
+  });
   if (citationEnd < content.length) {
     sections.push({ type: 'content', content: content.slice(citationEnd) });
   }
@@ -108,14 +126,19 @@ export function unwrapProseFences(content: string): string {
     const markdown = body.slice(heading.index).trim();
     const citation = leadingCode.match(/(?:^|\n)[ \t]*(\[\d+\])[ \t]*$/)?.[1];
     if (citation) {
-      leadingCode = leadingCode.replace(/(?:^|\n)[ \t]*\[\d+\][ \t]*$/, '').trimEnd();
+      leadingCode = leadingCode
+        .replace(/(?:^|\n)[ \t]*\[\d+\][ \t]*$/, '')
+        .trimEnd();
     }
 
     const nestedMarker = nestedFences[0][1];
-    const nestedClosingFence = nestedFences.length % 2 === 1 ? `\n${nestedMarker}` : '';
+    const nestedClosingFence =
+      nestedFences.length % 2 === 1 ? `\n${nestedMarker}` : '';
     const recoveredParts: string[] = [];
     if (leadingCode) {
-      recoveredParts.push(`\`\`\`${language || 'text'}\n${leadingCode}\n\`\`\``);
+      recoveredParts.push(
+        `\`\`\`${language || 'text'}\n${leadingCode}\n\`\`\``,
+      );
     }
     if (citation) recoveredParts.push(citation);
     recoveredParts.push(`${markdown}${nestedClosingFence}`);
@@ -129,7 +152,8 @@ export function unwrapProseFences(content: string): string {
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter(Boolean);
-    const isProseList = lines.length > 1 && lines.every((line) => /^[-*]\s+\S/.test(line));
+    const isProseList =
+      lines.length > 1 && lines.every((line) => /^[-*]\s+\S/.test(line));
     return isProseList ? `\n${body.trim()}\n` : fence;
   };
 
@@ -158,15 +182,23 @@ function extensionFor(language: string): string {
   return language || 'txt';
 }
 
-function normalizeFilename(meta: string, language: string, index: number): string {
+function normalizeFilename(
+  meta: string,
+  language: string,
+  index: number,
+): string {
   const explicit = meta.trim().match(/[\w./-]+\.[a-z0-9]+/i)?.[0];
   if (explicit) {
     const withoutPrefix = explicit.replace(/^\.?\/?src\//, '');
     return `/${withoutPrefix}`;
   }
 
-  if (['js', 'jsx', 'javascript', 'ts', 'tsx', 'typescript'].includes(language)) {
-    return index === 0 ? '/App.js' : `/Example${index + 1}.${extensionFor(language)}`;
+  if (
+    ['js', 'jsx', 'javascript', 'ts', 'tsx', 'typescript'].includes(language)
+  ) {
+    return index === 0
+      ? '/App.js'
+      : `/Example${index + 1}.${extensionFor(language)}`;
   }
   if (language === 'css') return '/styles.css';
   return `/example-${index + 1}.${extensionFor(language)}`;
@@ -185,7 +217,11 @@ export function parseSandpackFiles(content: string): Record<string, string> {
     index += 1;
   }
 
-  if (files['/styles.css'] && files['/App.js'] && !files['/App.js'].includes("'./styles.css'")) {
+  if (
+    files['/styles.css'] &&
+    files['/App.js'] &&
+    !files['/App.js'].includes("'./styles.css'")
+  ) {
     files['/App.js'] = `import './styles.css';\n${files['/App.js']}`;
   }
 
@@ -200,7 +236,10 @@ export function splitMarkdown(content: string): MarkdownPart[] {
 
   while ((match = SANDPACK_PATTERN.exec(content))) {
     if (match.index > cursor) {
-      parts.push({ type: 'markdown', content: content.slice(cursor, match.index) });
+      parts.push({
+        type: 'markdown',
+        content: content.slice(cursor, match.index),
+      });
     }
     const files = parseSandpackFiles(match[1]);
     if (Object.keys(files).length) {

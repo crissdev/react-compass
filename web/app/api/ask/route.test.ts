@@ -45,7 +45,9 @@ describe('POST /api/ask', () => {
       .split('\n')
       .map((line) => JSON.parse(line));
 
-    expect(mocks.getCachedAnswer).toHaveBeenCalledWith('How does useState work?');
+    expect(mocks.getCachedAnswer).toHaveBeenCalledWith(
+      'How does useState work?',
+    );
     expect(events).toEqual([
       {
         type: 'status',

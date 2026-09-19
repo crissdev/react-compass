@@ -8,7 +8,8 @@ describe('AnswerView citations', () => {
       <AnswerView
         answer={{
           kind: 'react_answer',
-          message: '## Overview\nReact remembers state [1].\n\n## Citations\n- State guide: [1]',
+          message:
+            '## Overview\nReact remembers state [1].\n\n## Citations\n- State guide: [1]',
           sources: [
             {
               id: 'state-guide',
@@ -17,7 +18,8 @@ describe('AnswerView citations', () => {
               section: 'React remembers state',
               source_type: 'learn',
               source_url: 'https://react.dev/learn/state-a-components-memory',
-              excerpt: 'State lets a component remember information between renders.',
+              excerpt:
+                'State lets a component remember information between renders.',
             },
           ],
         }}
@@ -34,7 +36,8 @@ describe('AnswerView citations', () => {
       <AnswerView
         answer={{
           kind: 'scope_notice',
-          message: 'I can only answer questions about React and its official documentation.',
+          message:
+            'I can only answer questions about React and its official documentation.',
           sources: [],
         }}
       />,
@@ -50,7 +53,8 @@ describe('AnswerView citations', () => {
       <AnswerView
         answer={{
           kind: 'no_match',
-          message: 'The React docs do not directly define stateless components.',
+          message:
+            'The React docs do not directly define stateless components.',
           suggestions: [
             'How should I structure state in React?',
             'When should I avoid redundant state?',
@@ -62,7 +66,8 @@ describe('AnswerView citations', () => {
               title: 'Choosing the State Structure',
               section: 'Avoid redundant state',
               source_type: 'learn',
-              source_url: 'https://react.dev/learn/choosing-the-state-structure',
+              source_url:
+                'https://react.dev/learn/choosing-the-state-structure',
               excerpt: 'Avoid redundant state.',
             },
           ],
