@@ -85,8 +85,8 @@ async def ask_stream(
         except asyncio.CancelledError:
             logger.info("Search cancelled by the client")
             raise
-        except Exception:
-            logger.exception("React documentation search failed")
+        except Exception as e:
+            logger.exception("React documentation search failed", exc_info=e)
             yield encode_event(
                 StreamEvent(
                     type="error",
