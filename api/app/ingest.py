@@ -7,33 +7,39 @@ from app.chroma_store import create_chroma_store
 from app.config import get_settings
 
 
-def markdown_files(path: Path) -> list[Path]:
+def _markdown_files(path: Path) -> list[Path]:
     return sorted(file for file in path.glob("**/*.md") if file.is_file())
 
 
-def source_url(source_type: str, root: Path, file: Path) -> str:
+def _source_url(source_type: str, root: Path, file: Path) -> str:
     relative = file.relative_to(root).with_suffix("")
     if relative.name == "index":
         relative = relative.parent
     return f"https://react.dev/{source_type}/{relative.as_posix()}".rstrip("/")
 
 
-def frontmatter_title(content: str) -> str | None:
-    lines = content.splitlines()
-    if not lines or lines[0].strip() != "---":
+def _frontmatter_title(content: str) -> str | None:
+    line_end = content.find("\n")
+    if line_end == -1 or content[:line_end].strip() != "---":
         return None
 
-    for line in lines[1:]:
+    line_start = line_end + 1
+    while line_start < len(content):
+        line_end = content.find("\n", line_start)
+        if line_end == -1:
+            line_end = len(content)
+        line = content[line_start:line_end]
         if line.strip() == "---":
             break
         key, separator, value = line.partition(":")
         if separator and key.strip() == "title":
             return value.strip().strip("\"'") or None
+        line_start = line_end + 1
 
     return None
 
 
-def split_markdown_sections(content: str) -> list[Document]:
+def _split_markdown_sections(content: str) -> list[Document]:
     """Split Markdown into sections, excluding content without a level-two heading."""
     splitter = MarkdownHeaderTextSplitter(
         headers_to_split_on=[("#", "h1"), ("##", "h2"), ("###", "h3")],
@@ -42,20 +48,20 @@ def split_markdown_sections(content: str) -> list[Document]:
     return [document for document in splitter.split_text(content) if document.metadata.get("h2")]
 
 
-def resolve_document_title(content: str, documents: list[Document], fallback_title: str) -> str:
+def _resolve_document_title(content: str, documents: list[Document], fallback_title: str) -> str:
     return str(
-        frontmatter_title(content)
+        _frontmatter_title(content)
         or (documents[0].metadata.get("h1") if documents else None)
         or fallback_title
     )
 
 
-def section_title(document: Document, title: str) -> str:
+def _section_title(document: Document, title: str) -> str:
     section = document.metadata.get("h3") or document.metadata.get("h2") or title
     return str(section).split(" {/*", maxsplit=1)[0].strip()
 
 
-def add_source_metadata(
+def _add_source_metadata(
     documents: list[Document], source_type: str, root: Path, file: Path, title: str
 ) -> list[Document]:
     """Attach source metadata to each document in place."""
@@ -63,8 +69,8 @@ def add_source_metadata(
         document.metadata.update(
             {
                 "source_type": source_type,
-                "source_url": source_url(source_type, root, file),
-                "section": section_title(document, title),
+                "source_url": _source_url(source_type, root, file),
+                "section": _section_title(document, title),
                 "language": "en",
                 "title": title,
             }
@@ -74,9 +80,9 @@ def add_source_metadata(
 
 def documents_for_file(source_type: str, root: Path, file: Path) -> list[Document]:
     content = file.read_text(encoding="utf-8")
-    documents = split_markdown_sections(content)
-    title = resolve_document_title(content, documents, file.stem)
-    return add_source_metadata(documents, source_type, root, file, title)
+    documents = _split_markdown_sections(content)
+    title = _resolve_document_title(content, documents, file.stem)
+    return _add_source_metadata(documents, source_type, root, file, title)
 
 
 def main() -> None:
@@ -90,7 +96,7 @@ def main() -> None:
 
     documents: list[Document] = []
     for source_type, root in roots.items():
-        for file in markdown_files(root):
+        for file in _markdown_files(root):
             documents.extend(documents_for_file(source_type, root, file))
 
     if not documents:
