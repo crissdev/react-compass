@@ -2,6 +2,7 @@
 .idea/
 .vscode/
 .vercel/
+.playwright-mcp/
 
 # Local environment and secrets
 .env

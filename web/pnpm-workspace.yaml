@@ -1,4 +1,5 @@
-enableGlobalVirtualStore: true
+# Turbopack resolves dependencies only within the project root.
+enableGlobalVirtualStore: false
 
 allowBuilds:
   es5-ext: false
