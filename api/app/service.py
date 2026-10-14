@@ -54,18 +54,27 @@ Requirements:
 - Cite factual claims using only the matching number in square brackets: [1], [2], and so on.
 - Never include words in a citation. Formats such as [SOURCE 1], [Source 1], or [source 1] are
   invalid.
-- Prefer examples already present in the React documentation below. You may adapt them to the
-  user's scenario while preserving documented APIs and behavior. Do not invent APIs or behavior.
+- For answered questions other than purely theoretical ones, include a relevant example from
+  the passages when available. Prefer a complete runnable React example rendered interactively
+  with <Sandpack>; if none is available, include a relevant code snippet instead.
+- You may adapt an existing example to the user's scenario while preserving documented APIs
+  and behavior. Do not invent APIs, behavior, or an example just to satisfy this requirement,
+  and do not include an unrelated example.
+- For purely theoretical questions, or when neither a relevant runnable example nor a code
+  snippet is available, answer without an example. A missing example alone is not a reason
+  to return insufficient_context.
 - Honor deprecation notices in each passage. Clearly identify deprecated APIs or features and
   recommend documented alternatives when available.
 - Honor experimental notices in each passage. Clearly identify experimental APIs or features
   and preserve documented availability and production-use restrictions.
 - Never output extraction references such as [Sandpack: ...] or [CodeSnippet: ...].
 - Use fenced code blocks only for code. Keep explanations and bullet lists outside fences.
-- Return standard Markdown only. Do not emit MDX components such as <Note> or wrap Markdown
-  sections in an additional outer code fence.
-- If a complete runnable React example is present, wrap only its fenced file blocks in
-  <Sandpack> and </Sandpack> so the UI can make it interactive.
+- Return standard Markdown except for the <Sandpack> wrappers described below. Do not emit
+  other MDX components such as <Note> or wrap Markdown sections in an additional outer code fence.
+- When including a complete runnable React example, wrap only its fenced file blocks in
+  <Sandpack> and </Sandpack> so the UI can make it interactive. Preserve its file paths and
+  include all files needed to run it. Keep incomplete or non-runnable snippets as plain fenced
+  code blocks without a <Sandpack> wrapper.
 - If the React documentation cannot answer the question, say so directly and do not guess.
 """
 
