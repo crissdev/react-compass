@@ -178,6 +178,126 @@ def test_example_metadata_contains_only_references_in_its_chunk(tmp_path: Path) 
     assert not _records(documents[2], "code_snippets")
 
 
+def test_page_intro_and_its_examples_are_copied_to_every_chunk(tmp_path: Path) -> None:
+    info = "js src/Intro.js active {1,3}"
+    code = "const [value, setValue] = useState(0);\n\n  console.log(value);\n"
+    snippet = f"```{info}\n{code}```"
+    sandpack = (
+        '<Sandpack showConsole autorun="false">\n'
+        "```js src/App.js active\n"
+        'export default function App() { return "</Intro>"; }\n'
+        "```\n\n"
+        "```css src/styles.css hidden\n"
+        "body { color: red; }\n"
+        "```\n"
+        "</Sandpack>"
+    )
+    local_snippet = "```js\nconsole.log('Section example');\n```"
+    documents = _documents_for_content(
+        tmp_path,
+        "---\ntitle: 'State'\n"
+        "description: |\n  <Intro>Frontmatter-only intro.</Intro>\n---\n\n"
+        "<Intro>\n\n**State** lets you remember a [value](/learn/state).\n\n"
+        f"{snippet}\n\n{sandpack}\n\n</Intro>\n\n"
+        "Other preamble content.\n\n"
+        f"## Reference\n\n{local_snippet}\n\n"
+        "### Parameters\n\nPass an initial value.\n\n"
+        "## Usage\n\nUpdate the value.\n",
+    )
+
+    assert len(documents) == 3
+    intro = documents[0].metadata["intro"]
+    intro_snippet_ids = _references(intro, "CodeSnippet")
+    intro_sandpack_ids = _references(intro, "Sandpack")
+    assert len(intro_snippet_ids) == len(intro_sandpack_ids) == 1
+    assert intro == (
+        "**State** lets you remember a [value](/learn/state).\n\n"
+        f"[CodeSnippet: {intro_snippet_ids[0]}]\n\n[Sandpack: {intro_sandpack_ids[0]}]"
+    )
+    for document in documents:
+        assert document.metadata["intro"] == intro
+        assert "<Intro>" not in document.page_content
+        assert "remember a" not in document.page_content
+        assert "Other preamble" not in document.page_content
+        assert _records(document, "code_snippets")[intro_snippet_ids[0]] == {
+            "content": snippet,
+            "info": info,
+            "language": "js",
+            "meta": "src/Intro.js active {1,3}",
+            "code": code,
+        }
+        assert _records(document, "sandpacks")[intro_sandpack_ids[0]]["content"] == sandpack
+        assert set(_records(document, "code_snippets")) == set(
+            intro_snippet_ids + _references(document.page_content, "CodeSnippet")
+        )
+        assert set(_records(document, "sandpacks")) == set(intro_sandpack_ids)
+    assert len(_records(documents[0], "code_snippets")) == 2
+    assert len(_records(documents[1], "code_snippets")) == 1
+    assert len(_records(documents[2], "code_snippets")) == 1
+
+
+def test_multiple_page_intros_are_combined_without_section_intros(tmp_path: Path) -> None:
+    local_intro = "<Intro>This introduction belongs to a section.</Intro>"
+    documents = _documents_for_content(
+        tmp_path,
+        "<Intro>First introduction.</Intro>\n\n"
+        "<Intro>Second introduction.</Intro>\n\n"
+        f"## First section\n\n{local_intro}\n\n"
+        "## Second section\n\nMore details.\n",
+    )
+
+    assert len(documents) == 2
+    assert all(
+        document.metadata["intro"] == "First introduction.\n\nSecond introduction."
+        for document in documents
+    )
+    assert local_intro in documents[0].page_content
+    assert local_intro not in documents[1].page_content
+
+
+@pytest.mark.parametrize(
+    "preamble",
+    [
+        "Ordinary preamble prose.",
+        "<Intro>\n \n</Intro>",
+        "<IntroBadge />\n\n<Intro />",
+        "```md\n<Intro>A literal intro.</Intro>\n```",
+        "<Sandpack>\n<Intro>A literal intro.</Intro>\n</Sandpack>",
+    ],
+)
+def test_missing_empty_or_example_intros_do_not_add_page_metadata(
+    tmp_path: Path, preamble: str
+) -> None:
+    documents = _documents_for_content(
+        tmp_path,
+        f"{preamble}\n\n## Section\n\n<Intro>A local introduction.</Intro>\n",
+    )
+
+    assert len(documents) == 1
+    assert "intro" not in documents[0].metadata
+    assert not _records(documents[0], "code_snippets")
+    assert not _records(documents[0], "sandpacks")
+
+
+def test_intro_code_hides_fake_headings_and_intro_tag_literals(tmp_path: Path) -> None:
+    snippet = "~~~md src/example.md\n## A code heading\n</Intro>\n<Intro>Literal.</Intro>\n~~~"
+    documents = _documents_for_content(
+        tmp_path,
+        f"<Intro>\nA summary.\n\n{snippet}\n\nMore summary.\n</Intro>\n\n"
+        "## Real section\n\nDetails.\n",
+    )
+
+    assert len(documents) == 1
+    document = documents[0]
+    intro = document.metadata["intro"]
+    snippet_ids = _references(intro, "CodeSnippet")
+    assert len(snippet_ids) == 1
+    assert intro == f"A summary.\n\n[CodeSnippet: {snippet_ids[0]}]\n\nMore summary."
+    assert _records(document, "code_snippets")[snippet_ids[0]]["content"] == snippet
+    assert document.metadata["section"] == "Real section"
+    assert "summary" not in document.page_content
+
+
 def test_repeated_examples_have_distinct_stable_references(tmp_path: Path) -> None:
     root = tmp_path / "learn"
     root.mkdir()

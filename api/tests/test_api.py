@@ -209,6 +209,68 @@ def test_format_context_keeps_example_catalogs_local_to_each_passage() -> None:
     assert second.endswith("```js\nsecond\n```")
 
 
+def test_format_context_restores_shared_intro_examples_in_every_passage() -> None:
+    snippet = "```js src/api.js active {1}\nconst value = use(initialResource);\n```"
+    sandpack = (
+        '<Sandpack autorun="false">\n'
+        "```js src/App.js active\nexport default function App() {}\n```\n"
+        "```css src/styles.css hidden\nbody { margin: 0; }\n```\n"
+        "</Sandpack>"
+    )
+    intro = "Read a resource.\n\n[CodeSnippet: signature]\n\n[Sandpack: example]"
+    documents = [
+        Document(
+            page_content=passage,
+            metadata={
+                "intro": intro,
+                "code_snippets": json.dumps({"signature": {"content": snippet}}),
+                "sandpacks": json.dumps({"example": {"content": sandpack}}),
+            },
+        )
+        for passage in ("Usage details", "Caveats")
+    ]
+
+    first, second = format_context(documents).split("\n\n---\n\n")
+
+    for block, passage in zip((first, second), ("Usage details", "Caveats"), strict=True):
+        assert f"Introduction:\nRead a resource.\n\n{snippet}\n\n{sandpack}\n\n" in block
+        assert block.endswith(passage)
+        assert "[CodeSnippet:" not in block
+        assert "[Sandpack:" not in block
+    assert all(document.metadata["intro"] == intro for document in documents)
+
+
+def test_format_context_keeps_intro_example_catalogs_local_to_each_passage() -> None:
+    intro = "[CodeSnippet: same-id] [CodeSnippet: missing]"
+    documents = [
+        Document(
+            page_content=passage,
+            metadata={
+                "intro": intro,
+                "code_snippets": json.dumps({"same-id": {"content": snippet}}),
+            },
+        )
+        for passage, snippet in (
+            ("First passage", "```js\nfirst\n```"),
+            ("Second passage", "```js\nsecond\n```"),
+        )
+    ]
+
+    first, second = format_context(documents).split("\n\n---\n\n")
+
+    assert "Introduction:\n```js\nfirst\n``` [CodeSnippet: missing]\n\nFirst passage" in first
+    assert "Introduction:\n```js\nsecond\n``` [CodeSnippet: missing]\n\nSecond passage" in second
+    assert "second" not in first
+    assert "first" not in second
+
+
+@pytest.mark.parametrize("intro", [None, "", " \n\t", False, 42, [], {}])
+def test_format_context_omits_empty_or_invalid_intros(intro: object) -> None:
+    document = Document(page_content="Usage details", metadata={"intro": intro})
+
+    assert format_context([document]) == "[1] React documentation\nURL: \nUsage details"
+
+
 @pytest.mark.parametrize(
     "catalog",
     [None, "invalid JSON", "[]", '{"example": null}', '{"example": {"content": 123}}'],
@@ -298,6 +360,48 @@ def test_answer_chain_sends_experimental_metadata_with_each_document_to_the_mode
     assert "Usage details" in messages[1].content
     assert "Caveats" in messages[1].content
     assert messages[1].content.endswith("Question: Is this API stable?")
+
+
+def test_answer_chain_sends_intro_metadata_and_its_code_to_the_model() -> None:
+    snippet = "```js\nconst [state, setState] = useState(initialState);\n```"
+    intro = "`useState` lets you add state.\n\n[CodeSnippet: signature]"
+    documents = [
+        Document(
+            page_content=passage,
+            metadata={
+                "intro": intro,
+                "code_snippets": json.dumps({"signature": {"content": snippet}}),
+            },
+        )
+        for passage in ("Usage details", "Caveats")
+    ]
+    prompts: list[ChatPromptValue] = []
+
+    def generate(prompt: ChatPromptValue) -> GeneratedAnswer:
+        prompts.append(prompt)
+        return GeneratedAnswer(
+            status="answered", message="`useState` adds state [1].", suggestions=[]
+        )
+
+    model = Mock()
+    model.with_structured_output.return_value = RunnableLambda(generate)
+    service = ReactDocsSearchService(model, Mock())
+
+    with tracing_context(enabled=False):
+        response = asyncio.run(service.answer("What does useState do?", documents))
+
+    assert response.kind == "react_answer"
+    assert len(prompts) == 1
+    messages = prompts[0].to_messages()
+    assert messages[1].type == "human"
+    assert (
+        messages[1].content.count(f"Introduction:\n`useState` lets you add state.\n\n{snippet}")
+        == 2
+    )
+    assert "[CodeSnippet:" not in messages[1].content
+    assert "Usage details" in messages[1].content
+    assert "Caveats" in messages[1].content
+    assert messages[1].content.endswith("Question: What does useState do?")
 
 
 def test_insufficient_context_hides_sources_and_returns_unique_suggestions() -> None:

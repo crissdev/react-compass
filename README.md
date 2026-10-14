@@ -55,22 +55,27 @@ Open [http://localhost:3000](http://localhost:3000).
 The generated Chroma collection is stored in `data/embeddings`. The directory is local-only and
 Git-ignored because it contains generated vector data. From the `api/` working directory,
 `CHROMA_PATH=../data/embeddings` selects it. Ingestion indexes sections beginning at the first
-level-two heading and intentionally ignores the introductory content before it.
+level-two heading, excluding the preamble from section text while retaining page metadata.
 
 Before splitting sections, ingestion replaces complete `<Sandpack>` examples with
 `[Sandpack: <id>]` references, then replaces standalone fenced code blocks with
-`[CodeSnippet: <id>]` references. Each chunk stores only its referenced examples in
+`[CodeSnippet: <id>]` references. Each chunk stores its referenced examples in
 the JSON-encoded `sandpacks` and `code_snippets` metadata fields. Sandpack records retain
 the full original MDX, including file fences; snippet records retain the original fence,
 code, language, and unmodified info string (filenames, `active`/`hidden`, highlighting,
 and `expectedErrors`). References are deterministic for an unchanged source file.
 
-YAML frontmatter stays excluded. `<Deprecated>` and `<Experimental>` notices in the page
-introduction are copied to every chunk's `deprecated` and `experimental` metadata fields,
+YAML frontmatter stays excluded. The Markdown inside a page's `<Intro>` is copied to every
+chunk's `intro` metadata field. Its examples use the same references as section examples,
+and their records are included in every chunk's example catalogs alongside that chunk's
+own examples. `<Intro>` blocks within a section stay local, and tags inside examples are ignored.
+
+`<Deprecated>` and `<Experimental>` notices in the page introduction are copied to every
+chunk's `deprecated` and `experimental` metadata fields,
 respectively. These fields retain the full Markdown inside the tags; notices within a section
 stay local to that section, and tags inside examples are ignored. Answer generation restores
-referenced examples and includes these notices with each retrieved passage. It sends the
-section/title and source URL alongside the passage, rather than the raw metadata dictionary.
+referenced examples and includes the intro and these notices with each retrieved passage. It
+sends the section/title and source URL alongside the passage, rather than the raw metadata dictionary.
 Rebuild existing collections to use this metadata format; ingestion adds
 chunks and does not remove older indexed versions.
 

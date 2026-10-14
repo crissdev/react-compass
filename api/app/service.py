@@ -184,6 +184,9 @@ def format_context(documents: Sequence[Document]) -> str:
             notice = metadata.get(key)
             if isinstance(notice, str) and notice.strip():
                 block += f"{label} notice:\n{notice.strip()}\n\n"
+        intro = metadata.get("intro")
+        if isinstance(intro, str) and intro.strip():
+            block += f"Introduction:\n{_restore_examples(intro.strip(), metadata)}\n\n"
         block += _restore_examples(document.page_content, metadata)
         blocks.append(block)
     return "\n\n---\n\n".join(blocks)
