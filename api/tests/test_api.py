@@ -1,8 +1,13 @@
+import asyncio
 import json
+from unittest.mock import Mock
 
 import pytest
 from fastapi.testclient import TestClient
 from langchain_core.documents import Document
+from langchain_core.prompt_values import ChatPromptValue
+from langchain_core.runnables import RunnableLambda
+from langsmith import tracing_context
 
 from app.main import app
 from app.models import (
@@ -12,6 +17,7 @@ from app.models import (
     SourceExcerpt,
 )
 from app.service import (
+    ReactDocsSearchService,
     format_answer_response,
     format_context,
     format_sources,
@@ -231,6 +237,67 @@ def test_format_context_repeats_page_deprecation_notice_in_every_passage() -> No
     assert f"Deprecation notice:\n{deprecated}\n\nUsage details" in first
     assert f"Deprecation notice:\n{deprecated}\n\nCaveats" in second
     assert legacy == "[3] Legacy source\nURL: \nLegacy passage"
+
+
+def test_format_context_repeats_page_experimental_notice_in_every_passage() -> None:
+    experimental = "**This API is experimental.**\n\nDon't use it in production."
+    deprecated = "Use the newer API instead."
+    documents = [
+        Document(page_content="Usage details", metadata={"experimental": experimental}),
+        Document(
+            page_content="Caveats",
+            metadata={"experimental": experimental, "deprecated": deprecated},
+        ),
+        Document(page_content="Stable API", metadata={"title": "Stable source"}),
+    ]
+
+    first, second, stable = format_context(documents).split("\n\n---\n\n")
+
+    assert f"Experimental notice:\n{experimental}\n\nUsage details" in first
+    assert f"Experimental notice:\n{experimental}\n\nCaveats" in second
+    assert f"Deprecation notice:\n{deprecated}\n\n" in second
+    assert stable == "[3] Stable source\nURL: \nStable API"
+
+
+@pytest.mark.parametrize("experimental", [None, "", " \n\t", False, 42, []])
+def test_format_context_omits_empty_or_invalid_experimental_notices(
+    experimental: object,
+) -> None:
+    document = Document(page_content="Usage details", metadata={"experimental": experimental})
+
+    assert format_context([document]) == "[1] React documentation\nURL: \nUsage details"
+
+
+def test_answer_chain_sends_experimental_metadata_with_each_document_to_the_model() -> None:
+    experimental = "This API is experimental and is not available in stable React."
+    documents = [
+        Document(page_content="Usage details", metadata={"experimental": experimental}),
+        Document(page_content="Caveats", metadata={"experimental": experimental}),
+    ]
+    prompts: list[ChatPromptValue] = []
+
+    def generate(prompt: ChatPromptValue) -> GeneratedAnswer:
+        prompts.append(prompt)
+        return GeneratedAnswer(
+            status="answered", message="This API is experimental [1].", suggestions=[]
+        )
+
+    model = Mock()
+    model.with_structured_output.return_value = RunnableLambda(generate)
+    service = ReactDocsSearchService(model, Mock())
+
+    with tracing_context(enabled=False):
+        response = asyncio.run(service.answer("Is this API stable?", documents))
+
+    assert response.kind == "react_answer"
+    assert len(prompts) == 1
+    messages = prompts[0].to_messages()
+    assert messages[0].type == "system"
+    assert messages[1].type == "human"
+    assert messages[1].content.count(f"Experimental notice:\n{experimental}\n\n") == 2
+    assert "Usage details" in messages[1].content
+    assert "Caveats" in messages[1].content
+    assert messages[1].content.endswith("Question: Is this API stable?")
 
 
 def test_insufficient_context_hides_sources_and_returns_unique_suggestions() -> None:

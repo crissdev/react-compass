@@ -58,6 +58,8 @@ Requirements:
   user's scenario while preserving documented APIs and behavior. Do not invent APIs or behavior.
 - Honor deprecation notices in each passage. Clearly identify deprecated APIs or features and
   recommend documented alternatives when available.
+- Honor experimental notices in each passage. Clearly identify experimental APIs or features
+  and preserve documented availability and production-use restrictions.
 - Never output extraction references such as [Sandpack: ...] or [CodeSnippet: ...].
 - Use fenced code blocks only for code. Keep explanations and bullet lists outside fences.
 - Return standard Markdown only. Do not emit MDX components such as <Note> or wrap Markdown
@@ -178,9 +180,10 @@ def format_context(documents: Sequence[Document]) -> str:
         )
         url = metadata.get("source_url") or metadata.get("source") or ""
         block = f"[{index}] {heading}\nURL: {url}\n"
-        deprecated = metadata.get("deprecated")
-        if isinstance(deprecated, str) and deprecated.strip():
-            block += f"Deprecation notice:\n{deprecated.strip()}\n\n"
+        for key, label in (("deprecated", "Deprecation"), ("experimental", "Experimental")):
+            notice = metadata.get(key)
+            if isinstance(notice, str) and notice.strip():
+                block += f"{label} notice:\n{notice.strip()}\n\n"
         block += _restore_examples(document.page_content, metadata)
         blocks.append(block)
     return "\n\n---\n\n".join(blocks)

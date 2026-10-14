@@ -1,4 +1,4 @@
-"""Lossless extraction of React docs examples before section splitting."""
+"""Lossless extraction of React docs examples and page notices before section splitting."""
 
 import hashlib
 import json
@@ -12,12 +12,14 @@ FENCE_PATTERN = re.compile(r"^[ \t]{0,3}(`{3,}|~{3,})([^\r\n]*)")
 SECTION_PATTERN = re.compile(r"^ {0,3}##[ \t]+", re.MULTILINE)
 REFERENCE_PATTERN = re.compile(r"\[(Sandpack|CodeSnippet): ([^\]\s]+)\]")
 EXAMPLE_METADATA_KEYS = {"Sandpack": "sandpacks", "CodeSnippet": "code_snippets"}
+PAGE_NOTICE_COMPONENTS = {"deprecated": "Deprecated", "experimental": "Experimental"}
 
 
 class MarkdownMetadata(TypedDict):
     sandpacks: dict[str, dict[str, str]]
     code_snippets: dict[str, dict[str, str]]
     deprecated: str
+    experimental: str
 
 
 @dataclass(frozen=True)
@@ -103,7 +105,7 @@ def _replace_examples(
     return "".join(parts), records
 
 
-def _preamble_deprecation(content: str, sandpacks: list[_Block]) -> str:
+def _preamble_notices(content: str, sandpacks: list[_Block]) -> dict[str, str]:
     examples = sorted([*sandpacks, *_fenced_blocks(content)], key=lambda block: block.start)
     section_start = len(content)
     for heading in SECTION_PATTERN.finditer(content):
@@ -111,23 +113,32 @@ def _preamble_deprecation(content: str, sandpacks: list[_Block]) -> str:
             section_start = heading.start()
             break
     preamble = content[:section_start]
-    return "\n\n".join(
-        preamble[block.body_start : block.body_end].strip()
-        for block in _component_blocks(preamble, "Deprecated")
-    )
+    return {
+        key: "\n\n".join(
+            preamble[block.body_start : block.body_end].strip()
+            for block in _component_blocks(preamble, component)
+            if not any(example.start <= block.start < example.end for example in examples)
+        )
+        for key, component in PAGE_NOTICE_COMPONENTS.items()
+    }
 
 
 def extract_markdown_metadata(content: str, source: str) -> tuple[str, MarkdownMetadata]:
     """Extract Sandpacks first, so their file fences remain part of the example."""
     sandpack_blocks = _component_blocks(content, "Sandpack")
-    deprecated = _preamble_deprecation(content, sandpack_blocks)
+    notices = _preamble_notices(content, sandpack_blocks)
     content, sandpacks = _replace_examples(content, sandpack_blocks, "Sandpack", source)
     content, snippets = _replace_examples(content, _fenced_blocks(content), "CodeSnippet", source)
-    return content, {"sandpacks": sandpacks, "code_snippets": snippets, "deprecated": deprecated}
+    return content, {
+        "sandpacks": sandpacks,
+        "code_snippets": snippets,
+        "deprecated": notices["deprecated"],
+        "experimental": notices["experimental"],
+    }
 
 
 def add_markdown_metadata(documents: list[Document], metadata: MarkdownMetadata) -> None:
-    """Store only each chunk's examples, encoded as Chroma-compatible scalars."""
+    """Store each chunk's examples and page notices as Chroma-compatible scalars."""
     for document in documents:
         references = REFERENCE_PATTERN.findall(document.page_content)
         for kind, key in EXAMPLE_METADATA_KEYS.items():
@@ -138,5 +149,6 @@ def add_markdown_metadata(documents: list[Document], metadata: MarkdownMetadata)
             }
             if records:
                 document.metadata[key] = json.dumps(records, ensure_ascii=False)
-        if metadata["deprecated"]:
-            document.metadata["deprecated"] = metadata["deprecated"]
+        for key in PAGE_NOTICE_COMPONENTS:
+            if metadata[key]:
+                document.metadata[key] = metadata[key]

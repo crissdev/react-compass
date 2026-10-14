@@ -202,18 +202,35 @@ def test_repeated_examples_have_distinct_stable_references(tmp_path: Path) -> No
         assert set(_records(first[0], key)) == set(ids)
 
 
-def test_page_deprecation_is_copied_to_every_chunk_without_indexing_the_intro(
+@pytest.mark.parametrize(
+    ("component", "key", "notice_text"),
+    [
+        ("Deprecated", "deprecated", "Use the newer API instead."),
+        (
+            "Experimental",
+            "experimental",
+            "**This API is experimental.**\n\n"
+            "- Install `react@experimental`.\n"
+            "- Don't use it in production.\n\n"
+            "Only available in [Server Components](/reference/rsc/use-client).",
+        ),
+    ],
+)
+def test_page_notice_is_copied_to_every_chunk_without_indexing_the_intro(
     tmp_path: Path,
+    component: str,
+    key: str,
+    notice_text: str,
 ) -> None:
-    notice = "<Deprecated>\nUse the newer API instead.\n</Deprecated>"
-    local_notice = "<Deprecated>Only this example is deprecated.</Deprecated>"
+    notice = f"<{component}>\n{notice_text}\n</{component}>"
+    local_notice = f"<{component}>Only this example has a notice.</{component}>"
     documents = _documents_for_content(
         tmp_path,
         "---\n"
         "title: 'Legacy API'\n"
         "description: |\n"
         "  ## This YAML value is not a section\n"
-        "  Frontmatter-only information.\n"
+        f"  <{component}>Frontmatter-only information.</{component}>\n"
         "---\n\n"
         f"{notice}\n\nIntroduction that should not be indexed.\n\n"
         "## Usage\n\nUse this API carefully.\n\n"
@@ -224,15 +241,55 @@ def test_page_deprecation_is_copied_to_every_chunk_without_indexing_the_intro(
     assert len(documents) == 3
     for document in documents:
         assert document.metadata["title"] == "Legacy API"
-        assert "Use the newer API instead." in document.metadata["deprecated"]
-        assert "Only this example" not in document.metadata["deprecated"]
+        assert document.metadata[key] == notice_text
         assert "Frontmatter-only" not in document.page_content
         assert "This YAML value" not in document.page_content
         assert "Introduction that" not in document.page_content
-        assert "Use the newer API instead." not in document.page_content
+        assert notice_text not in document.page_content
     assert local_notice in documents[1].page_content
     assert local_notice not in documents[0].page_content
     assert local_notice not in documents[2].page_content
+
+
+def test_multiple_page_experimental_notices_are_combined(tmp_path: Path) -> None:
+    documents = _documents_for_content(
+        tmp_path,
+        "<Experimental>\nFirst warning.\n</Experimental>\n\n"
+        "<Experimental>\nSecond warning.\n</Experimental>\n\n"
+        "## Usage\n\nUse carefully.\n",
+    )
+
+    assert documents[0].metadata["experimental"] == "First warning.\n\nSecond warning."
+
+
+@pytest.mark.parametrize(
+    "intro",
+    [
+        "```md\n## Fake section\n<Experimental>A literal.</Experimental>\n```",
+        "<Sandpack>\n## Fake section\n<Experimental>A literal.</Experimental>\n</Sandpack>",
+        "<ExperimentalBadge />\n\n<Experimental />",
+    ],
+)
+def test_intro_examples_and_badges_do_not_mark_a_page_experimental(
+    tmp_path: Path, intro: str
+) -> None:
+    documents = _documents_for_content(tmp_path, f"{intro}\n\n## Usage\n\nStable API.\n")
+
+    assert len(documents) == 1
+    assert "experimental" not in documents[0].metadata
+
+
+def test_section_experimental_notice_stays_local(tmp_path: Path) -> None:
+    notice = "<Experimental>This example is experimental.</Experimental>"
+    documents = _documents_for_content(
+        tmp_path,
+        f"## Experimental example\n\n{notice}\n\n## Stable example\n\nStable API.\n",
+    )
+
+    assert len(documents) == 2
+    assert all("experimental" not in document.metadata for document in documents)
+    assert notice in documents[0].page_content
+    assert notice not in documents[1].page_content
 
 
 @pytest.mark.parametrize(

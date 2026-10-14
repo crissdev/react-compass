@@ -119,8 +119,11 @@ def test_extracted_metadata_survives_local_chroma_retrieval(tmp_path: Path) -> N
     file = root / "legacy.md"
     snippet = "```js {expectedErrors: {'react-compiler': [5]}}\nlegacy();\n```"
     sandpack = "<Sandpack>\n```js src/App.js active\nexport default App;\n```\n</Sandpack>"
+    experimental = "**This API is experimental.**\n\nDon't use it in production."
     file.write_text(
-        f"<Deprecated>Use the newer API.</Deprecated>\n\n## Usage\n\n{snippet}\n\n{sandpack}\n",
+        "<Deprecated>Use the newer API.</Deprecated>\n\n"
+        f"<Experimental>\n\n{experimental}\n\n</Experimental>\n\n"
+        f"## Usage\n\n{snippet}\n\n{sandpack}\n",
         encoding="utf-8",
     )
     documents = documents_for_file("reference", root, file)
@@ -136,9 +139,11 @@ def test_extracted_metadata_survives_local_chroma_retrieval(tmp_path: Path) -> N
     assert len(retrieved) == 1
     assert retrieved[0].page_content == documents[0].page_content
     assert retrieved[0].metadata == documents[0].metadata
+    assert retrieved[0].metadata["experimental"] == experimental
     context = format_context(retrieved)
     assert snippet in context
     assert sandpack in context
     assert "Deprecation notice:\nUse the newer API." in context
+    assert f"Experimental notice:\n{experimental}\n\n" in context
     assert "[CodeSnippet:" not in context
     assert "[Sandpack:" not in context

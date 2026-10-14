@@ -65,10 +65,13 @@ the full original MDX, including file fences; snippet records retain the origina
 code, language, and unmodified info string (filenames, `active`/`hidden`, highlighting,
 and `expectedErrors`). References are deterministic for an unchanged source file.
 
-YAML frontmatter stays excluded. `<Deprecated>` notices in the page introduction are copied
-to every chunk's `deprecated` metadata; notices within a section stay local to that section.
-Answer generation restores referenced examples and includes the deprecation notice with each
-retrieved passage. Rebuild existing collections to use this metadata format; ingestion adds
+YAML frontmatter stays excluded. `<Deprecated>` and `<Experimental>` notices in the page
+introduction are copied to every chunk's `deprecated` and `experimental` metadata fields,
+respectively. These fields retain the full Markdown inside the tags; notices within a section
+stay local to that section, and tags inside examples are ignored. Answer generation restores
+referenced examples and includes these notices with each retrieved passage. It sends the
+section/title and source URL alongside the passage, rather than the raw metadata dictionary.
+Rebuild existing collections to use this metadata format; ingestion adds
 chunks and does not remove older indexed versions.
 
 For production, configure `CHROMA_API_KEY`, `CHROMA_TENANT`, and `CHROMA_DATABASE`. The API then
