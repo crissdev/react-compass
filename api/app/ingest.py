@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from pathlib import Path
 
 from langchain_core.documents import Document
@@ -19,11 +20,20 @@ def _source_url(source_type: str, root: Path, file: Path) -> str:
     return f"https://react.dev/{source_type}/{relative.as_posix()}".rstrip("/")
 
 
-def _frontmatter_title(content: str) -> str | None:
+@dataclass(frozen=True)
+class _ParsedMarkdown:
+    frontmatter_title: str | None
+    content: str
+
+
+def _parse_frontmatter(content: str) -> _ParsedMarkdown:
+    """Extract the scalar title and body without splitting the full document."""
     line_end = content.find("\n")
     if line_end == -1 or content[:line_end].strip() != "---":
-        return None
+        return _ParsedMarkdown(None, content)
 
+    title = None
+    title_found = False
     line_start = line_end + 1
     while line_start < len(content):
         line_end = content.find("\n", line_start)
@@ -31,25 +41,14 @@ def _frontmatter_title(content: str) -> str | None:
             line_end = len(content)
         line = content[line_start:line_end]
         if line.strip() == "---":
-            break
+            return _ParsedMarkdown(title, content[line_end + 1 :])
         key, separator, value = line.partition(":")
-        if separator and key.strip() == "title":
-            return value.strip().strip("\"'") or None
+        if not title_found and separator and key.strip() == "title":
+            title = value.strip().strip("\"'") or None
+            title_found = True
         line_start = line_end + 1
 
-    return None
-
-
-def _without_frontmatter(content: str) -> str:
-    lines = content.splitlines(keepends=True)
-    if not lines or lines[0].strip() != "---":
-        return content
-    offset = len(lines[0])
-    for line in lines[1:]:
-        offset += len(line)
-        if line.strip() == "---":
-            return content[offset:]
-    return content
+    return _ParsedMarkdown(title, content)
 
 
 def _split_markdown_sections(content: str) -> list[Document]:
@@ -61,9 +60,11 @@ def _split_markdown_sections(content: str) -> list[Document]:
     return [document for document in splitter.split_text(content) if document.metadata.get("h2")]
 
 
-def _resolve_document_title(content: str, documents: list[Document], fallback_title: str) -> str:
+def _resolve_document_title(
+    frontmatter_title: str | None, documents: list[Document], fallback_title: str
+) -> str:
     return str(
-        _frontmatter_title(content)
+        frontmatter_title
         or (documents[0].metadata.get("h1") if documents else None)
         or fallback_title
     )
@@ -92,12 +93,12 @@ def _add_source_metadata(
 
 
 def documents_for_file(source_type: str, root: Path, file: Path) -> list[Document]:
-    content = file.read_text(encoding="utf-8")
+    parsed = _parse_frontmatter(file.read_text(encoding="utf-8"))
     markdown, metadata = extract_markdown_metadata(
-        _without_frontmatter(content), _source_url(source_type, root, file)
+        parsed.content, _source_url(source_type, root, file)
     )
     documents = _split_markdown_sections(markdown)
-    title = _resolve_document_title(content, documents, file.stem)
+    title = _resolve_document_title(parsed.frontmatter_title, documents, file.stem)
     add_markdown_metadata(documents, metadata)
     return _add_source_metadata(documents, source_type, root, file, title)
 

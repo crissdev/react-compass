@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from langchain_core.documents import Document
 
-from app.ingest import documents_for_file
+from app.ingest import _parse_frontmatter, documents_for_file
 
 
 def _documents_for_content(tmp_path: Path, content: str) -> list[Document]:
@@ -24,6 +24,48 @@ def _records(document: Document, key: str) -> dict[str, dict[str, str]]:
     value = document.metadata.get(key, "{}")
     assert isinstance(value, str)
     return json.loads(value)
+
+
+@pytest.mark.parametrize(
+    ("content", "title", "body"),
+    [
+        ("", None, ""),
+        ("---", None, "---"),
+        ("## Usage\n\nBody.\n", None, "## Usage\n\nBody.\n"),
+        ("Intro\n---\ntitle: Body title\n---\n", None, "Intro\n---\ntitle: Body title\n---\n"),
+        ("---\ntitle: 'Hooks: an overview'\n---\n\nBody.\n", "Hooks: an overview", "\nBody.\n"),
+        ('---\ntitle: "Hooks"\n---', "Hooks", ""),
+        ("---\n---\ntitle: Body title\n", None, "title: Body title\n"),
+        ("---\ntitle: First\ntitle: Second\n---\nBody.", "First", "Body."),
+        ("---\ntitle: ''\ntitle: Second\n---\nBody.", None, "Body."),
+        (" --- \r\ntitle: Hooks\r\n --- \r\n\r\n  Body.\r\n", "Hooks", "\r\n  Body.\r\n"),
+        ("---\ntitle: Hooks\n## Usage\n", "Hooks", "---\ntitle: Hooks\n## Usage\n"),
+    ],
+)
+def test_frontmatter_parsing_preserves_the_title_and_remaining_content(
+    content: str, title: str | None, body: str
+) -> None:
+    parsed = _parse_frontmatter(content)
+
+    assert parsed.frontmatter_title == title
+    assert parsed.content == body
+
+
+@pytest.mark.parametrize(
+    ("frontmatter", "heading", "expected_title"),
+    [
+        ("---\ntitle: ''\n---\n", "# Page heading\n\n", "Page heading"),
+        ("---\n---\n", "# Page heading\n\n", "Page heading"),
+        ("", "", "examples"),
+    ],
+)
+def test_documents_fall_back_without_a_frontmatter_title(
+    tmp_path: Path, frontmatter: str, heading: str, expected_title: str
+) -> None:
+    documents = _documents_for_content(tmp_path, f"{frontmatter}{heading}## Usage\n\nBody.\n")
+
+    assert len(documents) == 1
+    assert documents[0].metadata["title"] == expected_title
 
 
 def test_documents_use_the_frontmatter_title(tmp_path: Path) -> None:
