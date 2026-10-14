@@ -5,6 +5,7 @@ from langchain_text_splitters import MarkdownHeaderTextSplitter
 
 from app.chroma_store import create_chroma_store
 from app.config import get_settings
+from app.markdown_metadata import add_markdown_metadata, extract_markdown_metadata
 
 
 def _markdown_files(path: Path) -> list[Path]:
@@ -37,6 +38,18 @@ def _frontmatter_title(content: str) -> str | None:
         line_start = line_end + 1
 
     return None
+
+
+def _without_frontmatter(content: str) -> str:
+    lines = content.splitlines(keepends=True)
+    if not lines or lines[0].strip() != "---":
+        return content
+    offset = len(lines[0])
+    for line in lines[1:]:
+        offset += len(line)
+        if line.strip() == "---":
+            return content[offset:]
+    return content
 
 
 def _split_markdown_sections(content: str) -> list[Document]:
@@ -80,8 +93,12 @@ def _add_source_metadata(
 
 def documents_for_file(source_type: str, root: Path, file: Path) -> list[Document]:
     content = file.read_text(encoding="utf-8")
-    documents = _split_markdown_sections(content)
+    markdown, metadata = extract_markdown_metadata(
+        _without_frontmatter(content), _source_url(source_type, root, file)
+    )
+    documents = _split_markdown_sections(markdown)
     title = _resolve_document_title(content, documents, file.stem)
+    add_markdown_metadata(documents, metadata)
     return _add_source_metadata(documents, source_type, root, file, title)
 
 

@@ -1,4 +1,5 @@
 import asyncio
+import json
 import re
 from collections.abc import Sequence
 from functools import lru_cache
@@ -14,6 +15,7 @@ from langsmith import traceable
 
 from app.chroma_store import create_chroma_store
 from app.config import Settings, get_settings
+from app.markdown_metadata import REFERENCE_PATTERN
 from app.models import AnswerResponse, GeneratedAnswer, QuestionClassification, SourceExcerpt
 
 CLASSIFICATION_PROMPT = """You classify scope and safety for a React documentation assistant.
@@ -54,6 +56,9 @@ Requirements:
   invalid.
 - Prefer examples already present in the React documentation below. You may adapt them to the
   user's scenario while preserving documented APIs and behavior. Do not invent APIs or behavior.
+- Honor deprecation notices in each passage. Clearly identify deprecated APIs or features and
+  recommend documented alternatives when available.
+- Never output extraction references such as [Sandpack: ...] or [CodeSnippet: ...].
 - Use fenced code blocks only for code. Keep explanations and bullet lists outside fences.
 - Return standard Markdown only. Do not emit MDX components such as <Note> or wrap Markdown
   sections in an additional outer code fence.
@@ -117,7 +122,7 @@ def format_sources(documents: Sequence[Document]) -> list[SourceExcerpt]:
             continue
         seen.add(key)
 
-        excerpt = document.page_content.strip()
+        excerpt = _restore_examples(document.page_content, metadata).strip()
         if len(excerpt) > 420:
             excerpt = excerpt[:417].rstrip() + "..."
 
@@ -136,6 +141,31 @@ def format_sources(documents: Sequence[Document]) -> list[SourceExcerpt]:
     return sources
 
 
+def _example_records(value: Any) -> dict[str, Any]:
+    if not isinstance(value, str):
+        return {}
+    try:
+        records = json.loads(value)
+    except json.JSONDecodeError:
+        return {}
+    return records if isinstance(records, dict) else {}
+
+
+def _restore_examples(content: str, metadata: dict[str, Any]) -> str:
+    examples = {
+        "Sandpack": _example_records(metadata.get("sandpacks")),
+        "CodeSnippet": _example_records(metadata.get("code_snippets")),
+    }
+
+    def restore(match: re.Match[str]) -> str:
+        record = examples[match.group(1)].get(match.group(2))
+        if isinstance(record, dict) and isinstance(record.get("content"), str):
+            return record["content"]
+        return match.group(0)
+
+    return REFERENCE_PATTERN.sub(restore, content)
+
+
 def format_context(documents: Sequence[Document]) -> str:
     blocks = []
     for index, document in enumerate(documents, start=1):
@@ -147,7 +177,12 @@ def format_context(documents: Sequence[Document]) -> str:
             or "React documentation"
         )
         url = metadata.get("source_url") or metadata.get("source") or ""
-        blocks.append(f"[{index}] {heading}\nURL: {url}\n{document.page_content}")
+        block = f"[{index}] {heading}\nURL: {url}\n"
+        deprecated = metadata.get("deprecated")
+        if isinstance(deprecated, str) and deprecated.strip():
+            block += f"Deprecation notice:\n{deprecated.strip()}\n\n"
+        block += _restore_examples(document.page_content, metadata)
+        blocks.append(block)
     return "\n\n---\n\n".join(blocks)
 
 

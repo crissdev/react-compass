@@ -90,6 +90,19 @@ def test_format_sources_preserves_markdown_structure() -> None:
     )
 
 
+def test_format_sources_restores_examples_in_user_visible_excerpts() -> None:
+    snippet = "```js src/data.js\nexport const value = 1;\n```"
+    document = Document(
+        page_content="## Example\n\n[CodeSnippet: example-id]",
+        metadata={"code_snippets": json.dumps({"example-id": {"content": snippet}})},
+    )
+
+    source = format_sources([document])[0]
+
+    assert source.excerpt == f"## Example\n\n{snippet}"
+    assert "example-id" not in source.excerpt
+
+
 def test_format_sources_links_to_the_most_specific_heading_anchor() -> None:
     document = Document(
         page_content=(
@@ -137,6 +150,87 @@ def test_format_context_uses_bare_numeric_citation_markers() -> None:
     assert context.startswith("[1] First source")
     assert "[2] Second source" in context
     assert "[SOURCE" not in context
+
+
+def test_format_context_restores_complete_examples_with_original_fence_metadata() -> None:
+    sandpack = (
+        '<Sandpack autorun="false">\n\n'
+        "```js src/Clock.js active\nexport default function Clock() {}\n```\n\n"
+        "```js src/data.js\nexport const data = [];\n```\n\n"
+        "</Sandpack>"
+    )
+    snippet = "```js {expectedErrors: {'react-compiler': [5]}}\nconst value = 1;\n```"
+    document = Document(
+        page_content="Try this example:\n\n[Sandpack: 1234]\n\n[CodeSnippet: 6789]",
+        metadata={
+            "sandpacks": json.dumps({"1234": {"content": sandpack}}),
+            "code_snippets": json.dumps(
+                {
+                    "6789": {
+                        "content": snippet,
+                        "language": "js",
+                        "meta": "{expectedErrors: {'react-compiler': [5]}}",
+                        "code": "const value = 1;\n",
+                    }
+                }
+            ),
+        },
+    )
+
+    context = format_context([document])
+
+    assert context.endswith(f"Try this example:\n\n{sandpack}\n\n{snippet}")
+    assert "[Sandpack: 1234]" not in context
+    assert "[CodeSnippet: 6789]" not in context
+    assert document.page_content.endswith("[CodeSnippet: 6789]")
+
+
+def test_format_context_keeps_example_catalogs_local_to_each_passage() -> None:
+    documents = [
+        Document(
+            page_content="[CodeSnippet: same-id] [CodeSnippet: missing]",
+            metadata={"code_snippets": json.dumps({"same-id": {"content": "```js\nfirst\n```"}})},
+        ),
+        Document(
+            page_content="[CodeSnippet: same-id]",
+            metadata={"code_snippets": json.dumps({"same-id": {"content": "```js\nsecond\n```"}})},
+        ),
+    ]
+
+    first, second = format_context(documents).split("\n\n---\n\n")
+
+    assert first.endswith("```js\nfirst\n``` [CodeSnippet: missing]")
+    assert second.endswith("```js\nsecond\n```")
+
+
+@pytest.mark.parametrize(
+    "catalog",
+    [None, "invalid JSON", "[]", '{"example": null}', '{"example": {"content": 123}}'],
+)
+def test_format_context_preserves_unknown_or_invalid_example_references(
+    catalog: str | None,
+) -> None:
+    document = Document(
+        page_content="[Sandpack: unknown]\n[CodeSnippet: example]",
+        metadata={"code_snippets": catalog},
+    )
+
+    assert format_context([document]).endswith(document.page_content)
+
+
+def test_format_context_repeats_page_deprecation_notice_in_every_passage() -> None:
+    deprecated = "This API is deprecated. Use createRoot instead."
+    documents = [
+        Document(page_content="Usage details", metadata={"deprecated": deprecated}),
+        Document(page_content="Caveats", metadata={"deprecated": deprecated}),
+        Document(page_content="Legacy passage", metadata={"title": "Legacy source"}),
+    ]
+
+    first, second, legacy = format_context(documents).split("\n\n---\n\n")
+
+    assert f"Deprecation notice:\n{deprecated}\n\nUsage details" in first
+    assert f"Deprecation notice:\n{deprecated}\n\nCaveats" in second
+    assert legacy == "[3] Legacy source\nURL: \nLegacy passage"
 
 
 def test_insufficient_context_hides_sources_and_returns_unique_suggestions() -> None:
