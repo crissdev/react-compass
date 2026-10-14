@@ -10,7 +10,8 @@ class AskRequest(BaseModel):
 class GeneratedAnswer(BaseModel):
     status: Literal["answered", "insufficient_context"] = Field(
         description=(
-            "Whether the supplied React documentation directly supports an answer to the question."
+            "Whether documented React APIs, behavior, or principles support an answer, including "
+            "applying them to a scenario not explicitly shown in the passages."
         )
     )
     message: str = Field(
