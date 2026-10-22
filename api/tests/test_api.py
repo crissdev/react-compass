@@ -158,6 +158,92 @@ def test_format_context_uses_bare_numeric_citation_markers() -> None:
     assert "[SOURCE" not in context
 
 
+def test_duplicate_passages_have_consistent_context_and_source_numbers() -> None:
+    document = Document(
+        id="first-ingestion",
+        page_content="State updates trigger a render.",
+        metadata={"title": "State", "source_url": "https://react.dev/learn/state"},
+    )
+    duplicate = document.model_copy(update={"id": "second-ingestion"})
+    other = Document(
+        page_content="Effects synchronize with external systems.",
+        metadata={"title": "Effects", "source_url": "https://react.dev/learn/effects"},
+    )
+    documents = [document, duplicate, other, document]
+
+    context = format_context(documents)
+    sources = format_sources(documents)
+
+    assert context.count(document.page_content) == 1
+    assert "[1] State" in context
+    assert "[2] Effects" in context
+    assert "[3]" not in context
+    assert [source.citation for source in sources] == [1, 2]
+    assert [source.excerpt for source in sources] == [document.page_content, other.page_content]
+
+
+@pytest.mark.parametrize(
+    "additional_metadata",
+    [
+        {"intro": "This API is for declaring state."},
+        {"experimental": "This API is not available in stable React."},
+        {"code_snippets": json.dumps({"example": {"content": "```js\nconst value = 1;\n```"}})},
+    ],
+)
+def test_passages_with_different_metadata_keep_separate_citations(
+    additional_metadata: dict[str, str],
+) -> None:
+    document = Document(
+        page_content="Usage details",
+        metadata={"title": "State", "source_url": "https://react.dev/learn/state"},
+    )
+    other = document.model_copy(update={"metadata": {**document.metadata, **additional_metadata}})
+
+    context = format_context([document, other])
+    sources = format_sources([document, other])
+
+    assert context.count(document.page_content) == 2
+    assert "[2] State" in context
+    assert [source.citation for source in sources] == [1, 2]
+
+
+def test_answer_citations_resolve_to_distinct_passages_in_the_same_section() -> None:
+    metadata = {
+        "title": "useState",
+        "section": "Reference",
+        "source_url": "https://react.dev/reference/react/useState",
+    }
+    documents = [
+        Document(page_content="State updates trigger a render.", metadata=metadata),
+        Document(page_content="State updates trigger a render.", metadata=metadata),
+        Document(page_content="Updaters receive the pending state.", metadata=metadata),
+    ]
+    prompts: list[ChatPromptValue] = []
+
+    def generate(prompt: ChatPromptValue) -> GeneratedAnswer:
+        prompts.append(prompt)
+        return GeneratedAnswer(
+            status="answered",
+            message="State updates trigger a render [1]. Updaters receive pending state [2].",
+            suggestions=[],
+        )
+
+    model = Mock()
+    model.with_structured_output.return_value = RunnableLambda(generate)
+    service = ReactDocsSearchService(model, Mock())
+
+    with tracing_context(enabled=False):
+        response = asyncio.run(service.answer("How do state updates work?", documents))
+
+    context = prompts[0].to_messages()[1].content
+    assert context.count(documents[0].page_content) == 1
+    assert "[2] Reference" in context
+    assert "[3]" not in context
+    assert response.message.endswith("Updaters receive pending state [2].")
+    assert [source.citation for source in response.sources] == [1, 2]
+    assert response.sources[1].excerpt == documents[2].page_content
+
+
 def test_format_context_restores_complete_examples_with_original_fence_metadata() -> None:
     sandpack = (
         '<Sandpack autorun="false">\n\n'
@@ -450,6 +536,16 @@ def test_answered_response_keeps_sources_and_discards_suggestions() -> None:
     assert response.kind == "react_answer"
     assert len(response.sources) == 1
     assert response.suggestions == []
+
+
+def test_answered_response_rejects_citations_without_a_matching_source() -> None:
+    documents = [Document(page_content="State updates trigger a render.")]
+    generated = GeneratedAnswer(
+        status="answered", message="State updates trigger a render [2].", suggestions=[]
+    )
+
+    with pytest.raises(ValueError, match="Answer cites unavailable sources: 2"):
+        format_answer_response(generated, documents)
 
 
 def test_stream_returns_status_and_result_events() -> None:

@@ -14,6 +14,7 @@ from langchain_core.runnables import Runnable
 from langsmith import traceable
 
 from app.chroma_store import create_chroma_store
+from app.citations import validate_citations
 from app.config import Settings, get_settings
 from app.markdown_metadata import REFERENCE_PATTERN
 from app.models import AnswerResponse, GeneratedAnswer, QuestionClassification, SourceExcerpt
@@ -119,20 +120,27 @@ def _source_url_with_anchor(url: str, metadata: dict[str, Any], content: str) ->
     return f"{url.partition('#')[0]}#{anchor}" if url and anchor else url
 
 
+def _unique_documents(documents: Sequence[Document]) -> list[Document]:
+    """Give context and sources the same passage order before assigning citations."""
+    unique: list[Document] = []
+    for document in documents:
+        if not any(
+            document.page_content == previous.page_content
+            and document.metadata == previous.metadata
+            for previous in unique
+        ):
+            unique.append(document)
+    return unique
+
+
 def format_sources(documents: Sequence[Document]) -> list[SourceExcerpt]:
     sources: list[SourceExcerpt] = []
-    seen: set[tuple[str, str]] = set()
 
-    for index, document in enumerate(documents, start=1):
+    for index, document in enumerate(_unique_documents(documents), start=1):
         metadata = document.metadata
         page_url = _source_url(metadata.get("source_url") or metadata.get("source"))
         url = _source_url_with_anchor(page_url, metadata, document.page_content)
         section = str(metadata.get("section") or metadata.get("h2") or "").strip()
-        key = (url, section)
-        if key in seen:
-            continue
-        seen.add(key)
-
         excerpt = _restore_examples(document.page_content, metadata).strip()
         if len(excerpt) > 420:
             excerpt = excerpt[:417].rstrip() + "..."
@@ -179,7 +187,7 @@ def _restore_examples(content: str, metadata: dict[str, Any]) -> str:
 
 def format_context(documents: Sequence[Document]) -> str:
     blocks = []
-    for index, document in enumerate(documents, start=1):
+    for index, document in enumerate(_unique_documents(documents), start=1):
         metadata = document.metadata
         heading = (
             metadata.get("section")
@@ -232,10 +240,12 @@ def format_answer_response(
             suggestions=_normalize_suggestions(answer.suggestions),
         )
 
+    sources = format_sources(documents)
+    validate_citations(answer.message, {source.citation for source in sources})
     return AnswerResponse(
         kind="react_answer",
         message=answer.message,
-        sources=format_sources(documents),
+        sources=sources,
     )
 
 
