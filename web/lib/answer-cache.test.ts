@@ -1,82 +1,166 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Answer } from './types';
 
-const mocks = vi.hoisted(() => ({
-  cacheLife: vi.fn(),
-  cacheTag: vi.fn(),
-}));
+const DAY_MS = 24 * 60 * 60 * 1000;
+const answer: Answer = {
+  kind: 'react_answer',
+  message: 'State lets a component remember information.',
+  sources: [],
+};
 
-vi.mock('next/cache', () => mocks);
+let cache: typeof import('./answer-cache');
 
-import { getCachedAnswer } from './answer-cache';
+describe('completed answer cache', () => {
+  beforeEach(async () => {
+    vi.resetModules();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-22T12:00:00Z'));
+    cache = await import('./answer-cache');
+  });
 
-describe('getCachedAnswer', () => {
   afterEach(() => {
-    vi.clearAllMocks();
-    vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
-  it('uses the guarded answer endpoint as its only upstream request', async () => {
-    const answer = {
-      kind: 'scope_notice' as const,
-      message: 'React questions only.',
-      sources: [],
+  it('returns a miss without making an upstream request', () => {
+    expect(cache.getCachedAnswer('How does useState work?')).toBeUndefined();
+  });
+
+  it('reuses completed answers for the same normalized question', () => {
+    cache.cacheAnswer('  How  does useState work?  ', answer);
+
+    expect(cache.getCachedAnswer('How does useState work?')).toEqual(answer);
+    expect(cache.getCachedAnswer('How does useEffect work?')).toBeUndefined();
+  });
+
+  it('keeps differently cased code in separate cache entries', () => {
+    const otherAnswer = {
+      ...answer,
+      message: 'Use the capitalized component.',
     };
-    const fetchMock = vi.fn().mockResolvedValue(Response.json(answer));
-    vi.stubGlobal('fetch', fetchMock);
+    cache.cacheAnswer('Why does <button /> work?', answer);
+    cache.cacheAnswer('Why does <Button /> work?', otherAnswer);
 
-    await expect(
-      getCachedAnswer('  What is the capital of France?  '),
-    ).resolves.toEqual(answer);
-
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith(
-      'http://127.0.0.1:8000/ask',
-      expect.objectContaining({
-        body: JSON.stringify({ question: 'What is the capital of France?' }),
-        cache: 'no-store',
-        method: 'POST',
-      }),
+    expect(cache.getCachedAnswer('Why does <button /> work?')).toEqual(answer);
+    expect(cache.getCachedAnswer('Why does <Button /> work?')).toEqual(
+      otherAnswer,
     );
-    expect(mocks.cacheLife).toHaveBeenCalledWith({
-      stale: 0,
-      revalidate: 0,
-      expire: 1,
-    });
   });
 
-  it('retains grounded answers with the weekly cache profile', async () => {
-    const answer = {
-      kind: 'react_answer' as const,
-      message: 'State lets a component remember information.',
-      sources: [],
-    };
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json(answer)));
+  it.each(['no_match', 'scope_notice'] as const)(
+    'does not store %s responses',
+    (kind) => {
+      cache.cacheAnswer('An unrelated question', { ...answer, kind });
 
-    await expect(getCachedAnswer('How does useState work?')).resolves.toEqual(
-      answer,
+      expect(cache.getCachedAnswer('An unrelated question')).toBeUndefined();
+    },
+  );
+
+  it('isolates stored answers from mutations by callers', () => {
+    const original = { ...answer };
+    cache.cacheAnswer('How does useState work?', original);
+    original.message = 'Changed after storage';
+
+    const retrieved = cache.getCachedAnswer('How does useState work?');
+    expect(retrieved).toEqual(answer);
+    retrieved!.message = 'Changed after retrieval';
+    expect(cache.getCachedAnswer('How does useState work?')).toEqual(answer);
+  });
+
+  it('expires seven days after storage even when read shortly before expiry', () => {
+    cache.cacheAnswer('How does useState work?', answer);
+    vi.advanceTimersByTime(7 * DAY_MS - 1);
+    expect(cache.getCachedAnswer('How does useState work?')).toEqual(answer);
+
+    vi.advanceTimersByTime(1);
+    expect(cache.getCachedAnswer('How does useState work?')).toBeUndefined();
+  });
+
+  it('replaces an answer and starts a new expiry period', () => {
+    cache.cacheAnswer('How does useState work?', answer);
+    vi.advanceTimersByTime(6 * DAY_MS);
+    const replacement = { ...answer, message: 'Updated documentation answer.' };
+    cache.cacheAnswer('How does useState work?', replacement);
+    vi.advanceTimersByTime(DAY_MS);
+
+    expect(cache.getCachedAnswer('How does useState work?')).toEqual(
+      replacement,
     );
-
-    expect(mocks.cacheLife).toHaveBeenCalledWith('weeks');
-    expect(mocks.cacheTag).toHaveBeenCalledTimes(1);
   });
 
-  it('does not retain no-match suggestions', async () => {
-    const answer = {
-      kind: 'no_match' as const,
-      message: 'No direct answer found.',
-      sources: [],
-      suggestions: ['How should I structure state in React?'],
-    };
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json(answer)));
+  it('evicts the least recently used answer above 256 entries', () => {
+    for (let index = 0; index < 256; index += 1) {
+      cache.cacheAnswer(`Question ${index}`, answer);
+    }
+    cache.getCachedAnswer('Question 0');
+    cache.cacheAnswer('Question 256', answer);
 
-    await expect(
-      getCachedAnswer('What are stateless components?'),
-    ).resolves.toEqual(answer);
+    expect(cache.getCachedAnswer('Question 0')).toEqual(answer);
+    expect(cache.getCachedAnswer('Question 1')).toBeUndefined();
+    expect(cache.getCachedAnswer('Question 255')).toEqual(answer);
+    expect(cache.getCachedAnswer('Question 256')).toEqual(answer);
+  });
 
-    expect(mocks.cacheLife).toHaveBeenCalledWith({
-      stale: 0,
-      revalidate: 0,
-      expire: 1,
+  it('evicts least recently used answers when total payload exceeds 8 MiB', () => {
+    const largeAnswer = { ...answer, message: 'a'.repeat(3 * 1024 * 1024) };
+    cache.cacheAnswer('Question 0', largeAnswer);
+    cache.cacheAnswer('Question 1', largeAnswer);
+    cache.getCachedAnswer('Question 0');
+    cache.cacheAnswer('Question 2', largeAnswer);
+
+    expect(cache.getCachedAnswer('Question 0')).toEqual(largeAnswer);
+    expect(cache.getCachedAnswer('Question 1')).toBeUndefined();
+    expect(cache.getCachedAnswer('Question 2')).toEqual(largeAnswer);
+  });
+
+  it('measures payload size in bytes and skips oversized answers', () => {
+    cache.cacheAnswer('Small answer', answer);
+    cache.cacheAnswer('Oversized answer', {
+      ...answer,
+      message: 'é'.repeat(4 * 1024 * 1024),
     });
+
+    expect(cache.getCachedAnswer('Oversized answer')).toBeUndefined();
+    expect(cache.getCachedAnswer('Small answer')).toEqual(answer);
+  });
+
+  it('reclaims expired payloads before evicting fresh answers', () => {
+    const largeAnswer = { ...answer, message: 'a'.repeat(3 * 1024 * 1024) };
+    cache.cacheAnswer('Expiring answer', largeAnswer);
+    vi.advanceTimersByTime(DAY_MS);
+    cache.cacheAnswer('Fresh answer', largeAnswer);
+    cache.getCachedAnswer('Expiring answer');
+    vi.advanceTimersByTime(6 * DAY_MS);
+    cache.cacheAnswer('New answer', largeAnswer);
+
+    expect(cache.getCachedAnswer('Expiring answer')).toBeUndefined();
+    expect(cache.getCachedAnswer('Fresh answer')).toEqual(largeAnswer);
+    expect(cache.getCachedAnswer('New answer')).toEqual(largeAnswer);
+  });
+
+  it('invalidates every case variant while retaining unrelated answers', () => {
+    cache.cacheAnswer('How does useState work?', answer);
+    cache.cacheAnswer('HOW DOES USESTATE WORK?', answer);
+    cache.cacheAnswer('How does useEffect work?', answer);
+
+    cache.invalidateCachedAnswer('  how  does usestate work?  ');
+
+    expect(cache.getCachedAnswer('How does useState work?')).toBeUndefined();
+    expect(cache.getCachedAnswer('HOW DOES USESTATE WORK?')).toBeUndefined();
+    expect(cache.getCachedAnswer('How does useEffect work?')).toEqual(answer);
+  });
+
+  it('releases payload accounting after replacements and invalidations', () => {
+    const largeAnswer = { ...answer, message: 'a'.repeat(3 * 1024 * 1024) };
+    cache.cacheAnswer('Replaced answer', largeAnswer);
+    cache.cacheAnswer('Replaced answer', answer);
+    cache.cacheAnswer('Invalidated answer', largeAnswer);
+    cache.invalidateCachedAnswer('Invalidated answer');
+    cache.cacheAnswer('Large answer 1', largeAnswer);
+    cache.cacheAnswer('Large answer 2', largeAnswer);
+
+    expect(cache.getCachedAnswer('Replaced answer')).toEqual(answer);
+    expect(cache.getCachedAnswer('Large answer 1')).toEqual(largeAnswer);
+    expect(cache.getCachedAnswer('Large answer 2')).toEqual(largeAnswer);
   });
 });

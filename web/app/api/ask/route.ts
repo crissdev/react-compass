@@ -1,9 +1,20 @@
-import { revalidateTag } from 'next/cache';
-import { answerCacheTag, getCachedAnswer } from '@/lib/answer-cache';
+import {
+  cacheAnswer,
+  getCachedAnswer,
+  invalidateCachedAnswer,
+} from '@/lib/answer-cache';
+import { readAnswerStream } from '@/lib/answer-stream';
 import { normalizeQuestion } from '@/lib/questions';
 import type { StreamEvent } from '@/lib/types';
 
-const CACHE_STATUS_DELAY_MS = 500;
+const API_BASE_URL = process.env.API_BASE_URL ?? 'http://127.0.0.1:8000';
+const API_REQUEST_TIMEOUT_MS = Number(
+  process.env.API_REQUEST_TIMEOUT_MS ?? 130_000,
+);
+
+if (!Number.isFinite(API_REQUEST_TIMEOUT_MS) || API_REQUEST_TIMEOUT_MS <= 0) {
+  throw new Error('API_REQUEST_TIMEOUT_MS must be a positive, finite number.');
+}
 
 function encodeEvent(event: StreamEvent): Uint8Array {
   return new TextEncoder().encode(`${JSON.stringify(event)}\n`);
@@ -14,7 +25,7 @@ async function readQuestion(request: Request): Promise<string | null> {
     const payload = (await request.json()) as { question?: unknown };
     if (typeof payload.question !== 'string') return null;
     const question = normalizeQuestion(payload.question);
-    return question.length >= 2 ? question : null;
+    return question.length >= 2 && question.length <= 1_000 ? question : null;
   } catch {
     return null;
   }
@@ -24,70 +35,82 @@ export async function POST(request: Request) {
   const question = await readQuestion(request);
   if (!question) {
     return Response.json(
-      { message: 'A question with at least two characters is required.' },
+      { message: 'A question between 2 and 1,000 characters is required.' },
       { status: 400 },
     );
   }
 
-  let cancelled = request.signal.aborted;
-  const markCancelled = () => {
-    cancelled = true;
-  };
-  request.signal.addEventListener('abort', markCancelled, { once: true });
-  let pendingStatusTimer: ReturnType<typeof setTimeout> | null = null;
+  const upstream = new AbortController();
+  let streamCancelled = false;
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      if (!cancelled) {
-        controller.enqueue(
-          encodeEvent({
-            type: 'status',
-            stage: 'cache',
-            message: 'Checking saved React answers',
-          }),
-        );
-      }
+      let timeout: ReturnType<typeof setTimeout> | undefined;
+      const abortUpstream = () => upstream.abort(request.signal.reason);
+      request.signal.addEventListener('abort', abortUpstream, { once: true });
+      if (request.signal.aborted) abortUpstream();
+
+      const send = (event: StreamEvent) => {
+        if (!streamCancelled && !request.signal.aborted) {
+          controller.enqueue(encodeEvent(event));
+        }
+      };
 
       try {
-        pendingStatusTimer = setTimeout(() => {
-          if (!cancelled) {
-            controller.enqueue(
-              encodeEvent({
-                type: 'status',
-                stage: 'answering',
-                message: 'Checking question scope and preparing an answer',
-              }),
-            );
-          }
-        }, CACHE_STATUS_DELAY_MS);
+        if (upstream.signal.aborted) return;
+        send({
+          type: 'status',
+          stage: 'cache',
+          message: 'Checking saved React answers',
+        });
+        const cached = getCachedAnswer(question);
+        if (cached) {
+          send({ type: 'result', data: cached });
+          return;
+        }
 
-        const answer = await getCachedAnswer(question);
-        if (pendingStatusTimer) clearTimeout(pendingStatusTimer);
-        if (answer.kind !== 'react_answer') {
-          revalidateTag(answerCacheTag(question), { expire: 0 });
+        timeout = setTimeout(() => {
+          upstream.abort(new DOMException('Search timed out', 'TimeoutError'));
+        }, API_REQUEST_TIMEOUT_MS);
+
+        const response = await fetch(`${API_BASE_URL}/ask/stream`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question }),
+          cache: 'no-store',
+          signal: upstream.signal,
+        });
+        if (!response.ok) {
+          void response.body?.cancel().catch(() => undefined);
+          throw new Error('The documentation API returned an error.');
         }
-        if (!cancelled)
-          controller.enqueue(encodeEvent({ type: 'result', data: answer }));
+
+        await readAnswerStream(
+          response,
+          (event) => {
+            if (upstream.signal.aborted) return;
+            if (event.type === 'result') cacheAnswer(question, event.data);
+            send(event);
+          },
+          upstream.signal,
+        );
       } catch {
-        if (!cancelled) {
-          controller.enqueue(
-            encodeEvent({
-              type: 'error',
-              message:
-                'The search could not be completed. Check the API configuration and try again.',
-            }),
-          );
-        }
+        send({
+          type: 'error',
+          message:
+            upstream.signal.reason?.name === 'TimeoutError'
+              ? 'The search took too long. Please try again.'
+              : 'The search was interrupted before an answer was ready. Please try again.',
+        });
       } finally {
-        if (pendingStatusTimer) clearTimeout(pendingStatusTimer);
-        request.signal.removeEventListener('abort', markCancelled);
-        if (!cancelled) controller.close();
+        clearTimeout(timeout);
+        request.signal.removeEventListener('abort', abortUpstream);
+        if (!streamCancelled) controller.close();
       }
     },
     cancel() {
-      cancelled = true;
-      if (pendingStatusTimer) clearTimeout(pendingStatusTimer);
-      request.signal.removeEventListener('abort', markCancelled);
+      streamCancelled = true;
+      upstream.abort();
     },
   });
 
@@ -104,11 +127,11 @@ export async function DELETE(request: Request) {
   const question = await readQuestion(request);
   if (!question) {
     return Response.json(
-      { message: 'A question with at least two characters is required.' },
+      { message: 'A question between 2 and 1,000 characters is required.' },
       { status: 400 },
     );
   }
 
-  revalidateTag(answerCacheTag(question), { expire: 0 });
+  invalidateCachedAnswer(question);
   return Response.json({ invalidated: true });
 }

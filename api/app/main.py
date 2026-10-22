@@ -3,7 +3,7 @@ import logging
 from collections.abc import AsyncIterator
 from typing import Annotated
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from langsmith import traceable
@@ -11,9 +11,11 @@ from langsmith import traceable
 from app.config import get_settings
 from app.models import AnswerResponse, AskRequest, QuestionGateResponse, StreamEvent
 from app.service import ReactDocsSearchService, get_search_service, scope_notice_response
+from app.streaming import CancellableStreamingResponse
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
+SEARCH_TIMEOUT_MESSAGE = "The search took too long. Please try again."
 
 app = FastAPI(title="React Compass API", version="0.1.0")
 app.add_middleware(
@@ -39,7 +41,11 @@ async def ask(
     request: AskRequest,
     service: Annotated[ReactDocsSearchService, Depends(get_search_service)],
 ) -> AnswerResponse:
-    return await service.search(request.question)
+    try:
+        async with asyncio.timeout(settings.search_timeout_seconds):
+            return await service.search(request.question)
+    except TimeoutError as error:
+        raise HTTPException(status_code=504, detail=SEARCH_TIMEOUT_MESSAGE) from error
 
 
 @app.post("/classify", response_model=QuestionGateResponse)
@@ -47,7 +53,11 @@ async def classify_question(
     request: AskRequest,
     service: Annotated[ReactDocsSearchService, Depends(get_search_service)],
 ) -> QuestionGateResponse:
-    classification = await service.classify(request.question)
+    try:
+        async with asyncio.timeout(settings.search_timeout_seconds):
+            classification = await service.classify(request.question)
+    except TimeoutError as error:
+        raise HTTPException(status_code=504, detail=SEARCH_TIMEOUT_MESSAGE) from error
     response = None if classification.category == "react" else scope_notice_response()
     return QuestionGateResponse(category=classification.category, response=response)
 
@@ -59,6 +69,7 @@ async def ask_stream(
 ) -> StreamingResponse:
     @traceable(name="react_docs_search", run_type="chain")
     async def events() -> AsyncIterator[bytes]:
+        deadline = asyncio.get_running_loop().time() + settings.search_timeout_seconds
         try:
             yield encode_event(
                 StreamEvent(
@@ -67,7 +78,8 @@ async def ask_stream(
                     message="Checking question scope and safety",
                 )
             )
-            classification = await service.classify(request.question)
+            async with asyncio.timeout_at(deadline):
+                classification = await service.classify(request.question)
             if classification.category != "react":
                 yield encode_event(StreamEvent(type="result", data=scope_notice_response()))
                 return
@@ -75,16 +87,20 @@ async def ask_stream(
             yield encode_event(
                 StreamEvent(type="status", stage="retrieving", message="Searching React docs")
             )
-            documents = await service.retrieve(request.question)
+            async with asyncio.timeout_at(deadline):
+                documents = await service.retrieve(request.question)
             yield encode_event(
                 StreamEvent(type="status", stage="generating", message="Writing a grounded answer")
             )
-            await asyncio.sleep(0)
-            result = await service.answer(request.question, documents)
+            async with asyncio.timeout_at(deadline):
+                result = await service.answer(request.question, documents)
             yield encode_event(StreamEvent(type="result", data=result))
         except asyncio.CancelledError:
             logger.info("Search cancelled by the client")
             raise
+        except TimeoutError:
+            logger.warning("React documentation search exceeded its deadline")
+            yield encode_event(StreamEvent(type="error", message=SEARCH_TIMEOUT_MESSAGE))
         except Exception as e:
             logger.exception("React documentation search failed", exc_info=e)
             yield encode_event(
@@ -97,7 +113,7 @@ async def ask_stream(
                 )
             )
 
-    return StreamingResponse(
+    return CancellableStreamingResponse(
         events(),
         media_type="application/x-ndjson",
         headers={"Cache-Control": "no-cache", "X-Content-Type-Options": "nosniff"},

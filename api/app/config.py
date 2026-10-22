@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     chroma_database: str = "react-docs"
     react_dev_root: Path = Path("../react.dev/src/content")
     retrieval_count: int = 5
+    search_timeout_seconds: float = Field(default=120, gt=0, allow_inf_nan=False)
     allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
     @model_validator(mode="after")

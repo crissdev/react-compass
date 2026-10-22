@@ -1,40 +1,78 @@
-import { createHash } from 'node:crypto';
-import { cacheLife, cacheTag } from 'next/cache';
+import { Buffer } from 'node:buffer';
 import type { Answer } from '@/lib/types';
 import { normalizeQuestion, questionKey } from '@/lib/questions';
 
-const API_BASE_URL = process.env.API_BASE_URL ?? 'http://127.0.0.1:8000';
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const MAX_CACHE_ENTRIES = 256;
+const MAX_CACHE_BYTES = 8 * 1024 * 1024;
 
-export function answerCacheTag(question: string): string {
-  const digest = createHash('sha256')
-    .update(questionKey(question))
-    .digest('hex');
-  return `react-compass-answer:${digest}`;
+type CacheEntry = {
+  serializedAnswer: string;
+  expiresAt: number;
+  bytes: number;
+};
+
+// Store only completed answers. Active requests keep their own cancellation and
+// progress state, so one caller cannot interrupt another caller's search.
+const answers = new Map<string, CacheEntry>();
+let cachedBytes = 0;
+
+function removeEntry(key: string): void {
+  const entry = answers.get(key);
+  if (!entry) return;
+  cachedBytes -= entry.bytes;
+  answers.delete(key);
 }
 
-export async function getCachedAnswer(question: string): Promise<Answer> {
-  'use cache';
+export function getCachedAnswer(question: string): Answer | undefined {
+  const key = normalizeQuestion(question);
+  const entry = answers.get(key);
+  if (!entry) return undefined;
+  if (entry.expiresAt <= Date.now()) {
+    removeEntry(key);
+    return undefined;
+  }
 
-  cacheTag(answerCacheTag(question));
+  // Map insertion order tracks least recently used entries without extending TTL.
+  answers.delete(key);
+  answers.set(key, entry);
+  return JSON.parse(entry.serializedAnswer) as Answer;
+}
 
-  const response = await fetch(`${API_BASE_URL}/ask`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ question: normalizeQuestion(question) }),
-    cache: 'no-store',
+export function cacheAnswer(question: string, answer: Answer): void {
+  if (answer.kind !== 'react_answer') return;
+
+  const key = normalizeQuestion(question);
+  const serializedAnswer = JSON.stringify(answer);
+  const bytes = Buffer.byteLength(key) + Buffer.byteLength(serializedAnswer);
+  if (bytes > MAX_CACHE_BYTES) return;
+
+  const now = Date.now();
+  for (const [cachedKey, entry] of answers) {
+    if (entry.expiresAt <= now) removeEntry(cachedKey);
+  }
+  removeEntry(key);
+
+  while (
+    answers.size >= MAX_CACHE_ENTRIES ||
+    cachedBytes + bytes > MAX_CACHE_BYTES
+  ) {
+    const oldestKey = answers.keys().next().value;
+    if (oldestKey === undefined) break;
+    removeEntry(oldestKey);
+  }
+
+  answers.set(key, {
+    serializedAnswer,
+    bytes,
+    expiresAt: now + CACHE_TTL_MS,
   });
+  cachedBytes += bytes;
+}
 
-  if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(detail || 'The documentation API returned an error.');
+export function invalidateCachedAnswer(question: string): void {
+  const invalidatedKey = questionKey(question);
+  for (const key of answers.keys()) {
+    if (questionKey(key) === invalidatedKey) removeEntry(key);
   }
-
-  const answer = (await response.json()) as Answer;
-  if (answer.kind === 'react_answer') {
-    cacheLife('weeks');
-  } else {
-    cacheLife({ stale: 0, revalidate: 0, expire: 1 });
-  }
-
-  return answer;
 }

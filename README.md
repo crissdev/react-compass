@@ -5,7 +5,9 @@ A small React documentation assistant built as two applications in one workspace
 - `web/` — Next.js UI and backend-for-frontend proxy
 - `api/` — FastAPI, LangChain, and Chroma (local or Chroma Cloud)
 
-The answer pipeline classifies every uncached question for React relevance and prompt-injection attempts. React questions continue through retrieval and grounded answer generation; other inputs receive a fixed scope notice without running RAG. The UI streams progress events, renders highlighted code, and turns React docs-style `<Sandpack>` examples into editable previews. The browser keeps the 15 most recent questions. Next.js caches successful React answers with its weekly cache profile and immediately invalidates no-match results and scope notices, so only grounded answers are reused. Removing a history entry also invalidates its cached React answer.
+The answer pipeline classifies every uncached question for React relevance and prompt-injection attempts. React questions continue through retrieval and grounded answer generation; other inputs receive a fixed scope notice without running RAG. The UI streams the API's actual classification, retrieval, and generation progress, renders highlighted code, and turns React docs-style `<Sandpack>` examples into editable previews. The browser keeps the 15 most recent questions. Completed React answers are cached for seven days in each web server process, bounded to 256 entries and 8 MiB of serialized answers and keys. No-match results, scope notices, failed requests, and cancelled searches are not cached. Removing a history entry also invalidates its cached React answer in the current server process.
+
+Each uncached search owns its upstream request, so cancelling one search does not cancel another caller's work. Concurrent cache misses can run independently, and cache contents are lost on a server restart or deployment. Cancelling or leaving a search closes its stream and cancels active asynchronous API work. Synchronous retrieval already running in a worker thread may finish, but generation will not continue for the cancelled request. Interrupted streams show a retry message instead of silently ending without an answer.
 
 ## How it works
 
@@ -49,6 +51,11 @@ The answer pipeline classifies every uncached question for React relevance and p
    ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+The API limits each search to `SEARCH_TIMEOUT_SECONDS=120` by default. The web proxy's
+`API_REQUEST_TIMEOUT_MS=130000` also bounds connection and stream stalls. Keep the web
+deadline slightly above the API deadline when changing these settings. A timeout produces
+a retry message and cancels the upstream request.
 
 ## Data
 

@@ -6,6 +6,18 @@ from pydantic import ValidationError
 from app.config import Settings
 
 
+@pytest.mark.parametrize("timeout", [0, -1, float("inf"), float("nan")])
+def test_search_timeout_requires_a_positive_finite_value(timeout: float) -> None:
+    with pytest.raises(ValidationError, match="search_timeout_seconds"):
+        Settings(_env_file=None, search_timeout_seconds=timeout)
+
+
+def test_search_timeout_can_be_configured(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SEARCH_TIMEOUT_SECONDS", "45.5")
+
+    assert Settings(_env_file=None).search_timeout_seconds == 45.5
+
+
 def test_model_args_support_nested_environment_properties(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MODEL_ARGS__USE_RESPONSES_API", "true")
     monkeypatch.setenv("MODEL_ARGS__TEMPERATURE", "0.2")

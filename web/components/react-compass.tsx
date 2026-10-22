@@ -105,6 +105,7 @@ export function ReactCompass({ initialQuestion = '' }: ReactCompassProps) {
           controller.signal,
         );
       } catch (caught) {
+        if (controllerRef.current !== controller) return;
         if (caught instanceof DOMException && caught.name === 'AbortError') {
           setStatus('Search cancelled');
         } else {
@@ -129,12 +130,24 @@ export function ReactCompass({ initialQuestion = '' }: ReactCompassProps) {
     void runSearch(normalizedInitialQuestion);
   }, [normalizedInitialQuestion, runSearch]);
 
+  useEffect(() => {
+    return () => {
+      controllerRef.current?.abort();
+      controllerRef.current = null;
+      initialSearchStartedRef.current = false;
+    };
+  }, []);
+
   function navigateToQuestion(nextQuestion = question) {
     const value = normalizeQuestion(nextQuestion);
     if (value.length < 2 || isLoading) return;
 
     setQuestion(value);
-    router.push(questionHref(value));
+    if (value === normalizedInitialQuestion) {
+      void runSearch(value);
+    } else {
+      router.push(questionHref(value));
+    }
   }
 
   function submit(event: SubmitEvent<HTMLFormElement>) {
