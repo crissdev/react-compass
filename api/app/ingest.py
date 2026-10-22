@@ -10,7 +10,9 @@ from app.markdown_metadata import add_markdown_metadata, extract_markdown_metada
 
 
 def _markdown_files(path: Path) -> list[Path]:
-    return sorted(file for file in path.glob("**/*.md") if file.is_file())
+    return sorted(
+        file for file in path.glob("**/*.md") if file.name != "index.md" and file.is_file()
+    )
 
 
 def _source_url(source_type: str, root: Path, file: Path) -> str:

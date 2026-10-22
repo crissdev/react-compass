@@ -56,6 +56,8 @@ The generated Chroma collection is stored in `data/embeddings`. The directory is
 Git-ignored because it contains generated vector data. From the `api/` working directory,
 `CHROMA_PATH=../data/embeddings` selects it. Ingestion indexes sections beginning at the first
 level-two heading, excluding the preamble from section text while retaining page metadata.
+Files named `index.md` are skipped at every directory level because they link to other docs pages.
+Rebuild existing collections to remove previously indexed chunks from these files.
 
 Before splitting sections, ingestion replaces complete `<Sandpack>` examples with
 `[Sandpack: <id>]` references, then replaces standalone fenced code blocks with

@@ -1,11 +1,38 @@
 import json
 import re
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 from langchain_core.documents import Document
 
-from app.ingest import _parse_frontmatter, documents_for_file
+from app.config import Settings
+from app.ingest import _parse_frontmatter, documents_for_file, main
+
+
+def test_ingestion_excludes_index_pages_from_every_source(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    settings = Settings(_env_file=None, react_dev_root=tmp_path)
+    store = Mock()
+    monkeypatch.setattr("app.ingest.get_settings", lambda: settings)
+    monkeypatch.setattr("app.ingest.create_chroma_store", lambda settings: store)
+    expected_urls = set()
+    for source_type in ("reference", "learn", "blog"):
+        root = tmp_path / source_type
+        (root / "nested").mkdir(parents=True)
+        for relative in ("index.md", "nested/index.md"):
+            (root / relative).write_text("## Pages\n\n[Example](./example)\n", encoding="utf-8")
+        for relative in ("example.md", "nested/example.md", "nested/search-index.md"):
+            (root / relative).write_text("## Usage\n\nDocumentation content.\n", encoding="utf-8")
+            expected_urls.add(f"https://react.dev/{source_type}/{relative.removesuffix('.md')}")
+
+    main()
+
+    store.add_documents.assert_called_once()
+    documents = store.add_documents.call_args.args[0]
+    assert len(documents) == len(expected_urls)
+    assert {document.metadata["source_url"] for document in documents} == expected_urls
 
 
 def _documents_for_content(tmp_path: Path, content: str) -> list[Document]:
