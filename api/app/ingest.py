@@ -5,7 +5,7 @@ from langchain_core.documents import Document
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 
 from app.chroma_store import create_chroma_store
-from app.config import get_settings
+from app.config import Settings, get_settings
 from app.markdown_metadata import add_markdown_metadata, extract_markdown_metadata
 
 
@@ -105,9 +105,8 @@ def documents_for_file(source_type: str, root: Path, file: Path) -> list[Documen
     return _add_source_metadata(documents, source_type, root, file, title)
 
 
-def main() -> None:
-    settings = get_settings()
-    store = create_chroma_store(settings)
+def load_documents(settings: Settings) -> list[Document]:
+    """Read the configured documentation using the shared Markdown ingestion pipeline."""
     roots = {
         "reference": settings.react_docs_reference_path,
         "learn": settings.react_docs_learn_path,
@@ -122,6 +121,13 @@ def main() -> None:
     if not documents:
         raise RuntimeError("No React documentation Markdown files were found")
 
+    return documents
+
+
+def main() -> None:
+    settings = get_settings()
+    documents = load_documents(settings)
+    store = create_chroma_store(settings)
     store.add_documents(documents)
     destination = (
         f"Chroma Cloud database {settings.chroma_database}"

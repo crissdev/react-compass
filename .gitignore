@@ -8,6 +8,7 @@
 .env
 .env.*
 !.env.sample
+!api/.env.cloud.sample
 
 # Local vector database
 data/

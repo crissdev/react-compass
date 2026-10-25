@@ -103,6 +103,52 @@ cd api
 uv run python -m app.ingest
 ```
 
+To refresh **only Chroma Cloud**, copy `api/.env.cloud.sample` to `api/.env.cloud`
+and fill in its credentials from Vercel. Keep its embedding model, database, and
+collection consistent with the deployed API. Then run:
+
+```bash
+cd api
+uv run python -m app.ingest_cloud --dry-run
+uv run python -m app.ingest_cloud
+```
+
+For a repeatable replacement that shortens oversized records to fit Chroma Cloud:
+
+```bash
+cd api
+uv run python -m app.ingest_cloud --truncate-oversized --dry-run
+uv run python -m app.ingest_cloud --truncate-oversized
+```
+
+Use the same command after changing the source documentation or ingestion logic.
+Each completed run replaces the collection's records with the current source
+snapshot. Stable IDs prevent duplicate records on repeated runs.
+
+This command explicitly loads `api/.env.cloud` without using `api/.env` or ambient
+cloud credentials. Use `--env-file /path/to/file` to select another dotenv file;
+relative source paths are resolved from that file's directory. The dry run parses
+the sources without making embedding requests or contacting Chroma.
+
+Both modes check Chroma Cloud's default byte limits before making requests. By
+default, oversized records stop the command before any requests. With
+`--truncate-oversized`, document text and long prose metadata are shortened at a
+UTF-8 boundary and marked `[Excerpt shortened.]`. Oversized example catalogs are
+compacted, then retain only complete examples that fit. Individual examples are
+never cut into invalid code or JSON; references to omitted examples become
+`[Example omitted.]`. The command reports every affected source, section, and
+field. This intentionally discards text and examples from the cloud index; the
+source files retain their full content. No API deployment or retrieval format
+change is required. Metadata key/count violations still stop the command.
+
+The refresh keeps the existing collection ID, assigns deterministic chunk IDs,
+and replaces old records only after verifying every uploaded chunk. Before changing
+a populated collection, it creates and verifies a Chroma Cloud fork named
+`<collection>-backup-<timestamp>-<suffix>`. If forking is unavailable or upload
+verification fails, obsolete records are retained. Backups remain in cloud until
+you remove them. Run one refresh at a time, with no other ingestion jobs writing
+to the collection. Local Chroma databases are never opened by this command.
+
 For markdown-processing development without embedding API charges, use a separate local
 database in `api/.env`:
 
